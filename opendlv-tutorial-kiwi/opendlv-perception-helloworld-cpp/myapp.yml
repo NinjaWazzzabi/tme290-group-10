@@ -1,0 +1,14 @@
+
+version: '2'
+
+services:
+    cone-detector:
+        image: myapp
+        restart: on-failure
+        network_mode: "host"
+        ipc: "host"
+        volumes:
+            - /tmp:/tmp
+        environment:
+            - DISPLAY=${DISPLAY}
+        command: "/usr/bin/opendlv-perception-helloworld --cid=111 --name=img.argb --width=1280 --height=720 --verbose"
