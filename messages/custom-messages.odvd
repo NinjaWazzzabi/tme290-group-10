@@ -1,0 +1,8 @@
+message opendlv.robo.test [id = 9001] {
+  float x [id = 1];
+  float y [id = 2];
+  float z [id = 3];
+  float roll [id = 4];
+  float pitch [id = 5];
+  float yaw [id = 6];
+}

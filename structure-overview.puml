@@ -1,0 +1,16 @@
+@startuml Microservice
+
+state "CameraFeed" as cf       : Publisher of the camera feed
+state "ConeDetector" as cd     : Detects and broadcasts\ncone location
+state "KiwiDetector" as kd     : Detects and broadcasts\nother kiwi location
+state "ActionPlanner" as ap    : Decides between driving normally\nor stopping to let a kiwi pass
+state "AimpointDriver" as ad   : Follows path created by\ncones in constant velocity
+
+cf --> cd
+cf --> kd
+kd --> ap
+cd --> ap
+ap --> ad
+cd --> ad
+
+@enduml Microservice

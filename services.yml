@@ -1,0 +1,23 @@
+version: "2"
+
+services:
+    action-planner:
+        image: action-planner
+        network_mode: "host"
+        environment:
+            - DISPLAY=${DISPLAY}
+    aimpoint-driver:
+        image: aimpoint-driver
+        network_mode: "host"
+        environment:
+            - DISPLAY=${DISPLAY}
+    cone-detection:
+        image: cone-detection
+        network_mode: "host"
+        environment:
+            - DISPLAY=${DISPLAY}
+    kiwi-detection:
+        image: kiwi-detection
+        network_mode: "host"
+        environment:
+            - DISPLAY=${DISPLAY}
