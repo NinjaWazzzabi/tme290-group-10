@@ -76,8 +76,8 @@ void doTripletForwardVisit(uint32_t fieldIdentifier, std::string &&typeName, std
 #endif
 
 
-#ifndef OPENDLV_ROBO_TEST_HPP
-#define OPENDLV_ROBO_TEST_HPP
+#ifndef OPENDLV_ROBO_DRIVESTATE_HPP
+#define OPENDLV_ROBO_DRIVESTATE_HPP
 
 #ifdef WIN32
     // Export symbols if compile flags "LIB_SHARED" and "LIB_EXPORTS" are set on Windows.
@@ -100,10 +100,10 @@ void doTripletForwardVisit(uint32_t fieldIdentifier, std::string &&typeName, std
 #include <utility>
 namespace opendlv { namespace robo {
 using namespace std::string_literals; // NOLINT
-class LIB_API test {
+class LIB_API DriveState {
     private:
-        static constexpr const char* TheShortName = "test";
-        static constexpr const char* TheLongName = "opendlv.robo.test";
+        static constexpr const char* TheShortName = "DriveState";
+        static constexpr const char* TheLongName = "opendlv.robo.DriveState";
 
     public:
         inline static int32_t ID() {
@@ -117,55 +117,20 @@ class LIB_API test {
         }
 
     public:
-        test() = default;
-        test(const test&) = default;
-        test& operator=(const test&) = default;
-        test(test&&) = default;
-        test& operator=(test&&) = default;
-        ~test() = default;
+        DriveState() = default;
+        DriveState(const DriveState&) = default;
+        DriveState& operator=(const DriveState&) = default;
+        DriveState(DriveState&&) = default;
+        DriveState& operator=(DriveState&&) = default;
+        ~DriveState() = default;
 
     public:
-        inline test& x(const float &v) noexcept {
-            m_x = v;
+        inline DriveState& state(const uint32_t &v) noexcept {
+            m_state = v;
             return *this;
         }
-        inline float x() const noexcept {
-            return m_x;
-        }
-        inline test& y(const float &v) noexcept {
-            m_y = v;
-            return *this;
-        }
-        inline float y() const noexcept {
-            return m_y;
-        }
-        inline test& z(const float &v) noexcept {
-            m_z = v;
-            return *this;
-        }
-        inline float z() const noexcept {
-            return m_z;
-        }
-        inline test& roll(const float &v) noexcept {
-            m_roll = v;
-            return *this;
-        }
-        inline float roll() const noexcept {
-            return m_roll;
-        }
-        inline test& pitch(const float &v) noexcept {
-            m_pitch = v;
-            return *this;
-        }
-        inline float pitch() const noexcept {
-            return m_pitch;
-        }
-        inline test& yaw(const float &v) noexcept {
-            m_yaw = v;
-            return *this;
-        }
-        inline float yaw() const noexcept {
-            return m_yaw;
+        inline uint32_t state() const noexcept {
+            return m_state;
         }
 
     public:
@@ -175,27 +140,7 @@ class LIB_API test {
             (void)visitor;
 //            visitor.preVisit(ID(), ShortName(), LongName());
             if (1 == fieldId) {
-                doVisit(1, std::move("float"s), std::move("x"s), m_x, visitor);
-                return;
-            }
-            if (2 == fieldId) {
-                doVisit(2, std::move("float"s), std::move("y"s), m_y, visitor);
-                return;
-            }
-            if (3 == fieldId) {
-                doVisit(3, std::move("float"s), std::move("z"s), m_z, visitor);
-                return;
-            }
-            if (4 == fieldId) {
-                doVisit(4, std::move("float"s), std::move("roll"s), m_roll, visitor);
-                return;
-            }
-            if (5 == fieldId) {
-                doVisit(5, std::move("float"s), std::move("pitch"s), m_pitch, visitor);
-                return;
-            }
-            if (6 == fieldId) {
-                doVisit(6, std::move("float"s), std::move("yaw"s), m_yaw, visitor);
+                doVisit(1, std::move("uint32_t"s), std::move("state"s), m_state, visitor);
                 return;
             }
 //            visitor.postVisit();
@@ -204,12 +149,7 @@ class LIB_API test {
         template<class Visitor>
         inline void accept(Visitor &visitor) {
             visitor.preVisit(ID(), ShortName(), LongName());
-            doVisit(1, std::move("float"s), std::move("x"s), m_x, visitor);
-            doVisit(2, std::move("float"s), std::move("y"s), m_y, visitor);
-            doVisit(3, std::move("float"s), std::move("z"s), m_z, visitor);
-            doVisit(4, std::move("float"s), std::move("roll"s), m_roll, visitor);
-            doVisit(5, std::move("float"s), std::move("pitch"s), m_pitch, visitor);
-            doVisit(6, std::move("float"s), std::move("yaw"s), m_yaw, visitor);
+            doVisit(1, std::move("uint32_t"s), std::move("state"s), m_state, visitor);
             visitor.postVisit();
         }
 
@@ -217,31 +157,405 @@ class LIB_API test {
         inline void accept(PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
             (void)visit; // Prevent warnings from empty messages.
             std::forward<PreVisitor>(preVisit)(ID(), ShortName(), LongName());
-            doTripletForwardVisit(1, std::move("float"s), std::move("x"s), m_x, preVisit, visit, postVisit);
-            doTripletForwardVisit(2, std::move("float"s), std::move("y"s), m_y, preVisit, visit, postVisit);
-            doTripletForwardVisit(3, std::move("float"s), std::move("z"s), m_z, preVisit, visit, postVisit);
-            doTripletForwardVisit(4, std::move("float"s), std::move("roll"s), m_roll, preVisit, visit, postVisit);
-            doTripletForwardVisit(5, std::move("float"s), std::move("pitch"s), m_pitch, preVisit, visit, postVisit);
-            doTripletForwardVisit(6, std::move("float"s), std::move("yaw"s), m_yaw, preVisit, visit, postVisit);
+            doTripletForwardVisit(1, std::move("uint32_t"s), std::move("state"s), m_state, preVisit, visit, postVisit);
             std::forward<PostVisitor>(postVisit)();
         }
 
     private:
-        float m_x{ 0.0f }; // field identifier = 1.
-        float m_y{ 0.0f }; // field identifier = 2.
-        float m_z{ 0.0f }; // field identifier = 3.
-        float m_roll{ 0.0f }; // field identifier = 4.
-        float m_pitch{ 0.0f }; // field identifier = 5.
-        float m_yaw{ 0.0f }; // field identifier = 6.
+        uint32_t m_state{ 0 }; // field identifier = 1.
 };
 }}
 
 template<>
-struct isVisitable<opendlv::robo::test> {
+struct isVisitable<opendlv::robo::DriveState> {
     static const bool value = true;
 };
 template<>
-struct isTripletForwardVisitable<opendlv::robo::test> {
+struct isTripletForwardVisitable<opendlv::robo::DriveState> {
+    static const bool value = true;
+};
+#endif
+
+
+/*
+ * THIS IS AN AUTO-GENERATED FILE. DO NOT MODIFY AS CHANGES MIGHT BE OVERWRITTEN!
+ */
+
+#ifndef VISITABLE_TYPE_TRAIT
+#define VISITABLE_TYPE_TRAIT
+#include <cstdint>
+#include <string>
+#include <utility>
+
+template<bool b>
+struct visitorSelector {
+    template<typename T, class Visitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, Visitor &visitor) {
+        visitor.visit(fieldIdentifier, std::move(typeName), std::move(name), value);
+    }
+};
+
+template<>
+struct visitorSelector<true> {
+    template<typename T, class Visitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, Visitor &visitor) {
+        visitor.visit(fieldIdentifier, std::move(typeName), std::move(name), value);
+    }
+};
+
+template<typename T>
+struct isVisitable {
+    static const bool value = false;
+};
+
+template<typename T, class Visitor>
+void doVisit(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, Visitor &visitor) {
+    visitorSelector<isVisitable<T>::value >::impl(fieldIdentifier, std::move(typeName), std::move(name), value, visitor);
+}
+#endif
+
+#ifndef TRIPLET_FORWARD_VISITABLE_TYPE_TRAIT
+#define TRIPLET_FORWARD_VISITABLE_TYPE_TRAIT
+#include <cstdint>
+#include <string>
+#include <utility>
+
+template<bool b>
+struct tripletForwardVisitorSelector {
+    template<typename T, class PreVisitor, class Visitor, class PostVisitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+        (void)preVisit;
+        (void)postVisit;
+        std::forward<Visitor>(visit)(fieldIdentifier, std::move(typeName), std::move(name), value);
+    }
+};
+
+template<>
+struct tripletForwardVisitorSelector<true> {
+    template<typename T, class PreVisitor, class Visitor, class PostVisitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+        (void)fieldIdentifier;
+        (void)typeName;
+        (void)name;
+        // Apply preVisit, visit, and postVisit on value.
+        value.accept(preVisit, visit, postVisit);
+    }
+};
+
+template<typename T>
+struct isTripletForwardVisitable {
+    static const bool value = false;
+};
+
+template< typename T, class PreVisitor, class Visitor, class PostVisitor>
+void doTripletForwardVisit(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+    tripletForwardVisitorSelector<isTripletForwardVisitable<T>::value >::impl(fieldIdentifier, std::move(typeName), std::move(name), value, std::move(preVisit), std::move(visit), std::move(postVisit)); // NOLINT
+}
+#endif
+
+
+#ifndef OPENDLV_ROBO_TRAFFICLOCATION_HPP
+#define OPENDLV_ROBO_TRAFFICLOCATION_HPP
+
+#ifdef WIN32
+    // Export symbols if compile flags "LIB_SHARED" and "LIB_EXPORTS" are set on Windows.
+    #ifdef LIB_SHARED
+        #ifdef LIB_EXPORTS
+            #define LIB_API __declspec(dllexport)
+        #else
+            #define LIB_API __declspec(dllimport)
+        #endif
+    #else
+        // Disable definition if linking statically.
+        #define LIB_API
+    #endif
+#else
+    // Disable definition for non-Win32 systems.
+    #define LIB_API
+#endif
+
+#include <string>
+#include <utility>
+namespace opendlv { namespace robo {
+using namespace std::string_literals; // NOLINT
+class LIB_API TrafficLocation {
+    private:
+        static constexpr const char* TheShortName = "TrafficLocation";
+        static constexpr const char* TheLongName = "opendlv.robo.TrafficLocation";
+
+    public:
+        inline static int32_t ID() {
+            return 9002;
+        }
+        inline static const std::string ShortName() {
+            return TheShortName;
+        }
+        inline static const std::string LongName() {
+            return TheLongName;
+        }
+
+    public:
+        TrafficLocation() = default;
+        TrafficLocation(const TrafficLocation&) = default;
+        TrafficLocation& operator=(const TrafficLocation&) = default;
+        TrafficLocation(TrafficLocation&&) = default;
+        TrafficLocation& operator=(TrafficLocation&&) = default;
+        ~TrafficLocation() = default;
+
+    public:
+        inline TrafficLocation& relative_bearing(const float &v) noexcept {
+            m_relative_bearing = v;
+            return *this;
+        }
+        inline float relative_bearing() const noexcept {
+            return m_relative_bearing;
+        }
+        inline TrafficLocation& camera_x_perc(const float &v) noexcept {
+            m_camera_x_perc = v;
+            return *this;
+        }
+        inline float camera_x_perc() const noexcept {
+            return m_camera_x_perc;
+        }
+        inline TrafficLocation& camera_y_perc(const float &v) noexcept {
+            m_camera_y_perc = v;
+            return *this;
+        }
+        inline float camera_y_perc() const noexcept {
+            return m_camera_y_perc;
+        }
+
+    public:
+        template<class Visitor>
+        inline void accept(uint32_t fieldId, Visitor &visitor) {
+            (void)fieldId;
+            (void)visitor;
+//            visitor.preVisit(ID(), ShortName(), LongName());
+            if (1 == fieldId) {
+                doVisit(1, std::move("float"s), std::move("relative_bearing"s), m_relative_bearing, visitor);
+                return;
+            }
+            if (3 == fieldId) {
+                doVisit(3, std::move("float"s), std::move("camera_x_perc"s), m_camera_x_perc, visitor);
+                return;
+            }
+            if (4 == fieldId) {
+                doVisit(4, std::move("float"s), std::move("camera_y_perc"s), m_camera_y_perc, visitor);
+                return;
+            }
+//            visitor.postVisit();
+        }
+
+        template<class Visitor>
+        inline void accept(Visitor &visitor) {
+            visitor.preVisit(ID(), ShortName(), LongName());
+            doVisit(1, std::move("float"s), std::move("relative_bearing"s), m_relative_bearing, visitor);
+            doVisit(3, std::move("float"s), std::move("camera_x_perc"s), m_camera_x_perc, visitor);
+            doVisit(4, std::move("float"s), std::move("camera_y_perc"s), m_camera_y_perc, visitor);
+            visitor.postVisit();
+        }
+
+        template<class PreVisitor, class Visitor, class PostVisitor>
+        inline void accept(PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+            (void)visit; // Prevent warnings from empty messages.
+            std::forward<PreVisitor>(preVisit)(ID(), ShortName(), LongName());
+            doTripletForwardVisit(1, std::move("float"s), std::move("relative_bearing"s), m_relative_bearing, preVisit, visit, postVisit);
+            doTripletForwardVisit(3, std::move("float"s), std::move("camera_x_perc"s), m_camera_x_perc, preVisit, visit, postVisit);
+            doTripletForwardVisit(4, std::move("float"s), std::move("camera_y_perc"s), m_camera_y_perc, preVisit, visit, postVisit);
+            std::forward<PostVisitor>(postVisit)();
+        }
+
+    private:
+        float m_relative_bearing{ 0.0f }; // field identifier = 1.
+        float m_camera_x_perc{ 0.0f }; // field identifier = 3.
+        float m_camera_y_perc{ 0.0f }; // field identifier = 4.
+};
+}}
+
+template<>
+struct isVisitable<opendlv::robo::TrafficLocation> {
+    static const bool value = true;
+};
+template<>
+struct isTripletForwardVisitable<opendlv::robo::TrafficLocation> {
+    static const bool value = true;
+};
+#endif
+
+
+/*
+ * THIS IS AN AUTO-GENERATED FILE. DO NOT MODIFY AS CHANGES MIGHT BE OVERWRITTEN!
+ */
+
+#ifndef VISITABLE_TYPE_TRAIT
+#define VISITABLE_TYPE_TRAIT
+#include <cstdint>
+#include <string>
+#include <utility>
+
+template<bool b>
+struct visitorSelector {
+    template<typename T, class Visitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, Visitor &visitor) {
+        visitor.visit(fieldIdentifier, std::move(typeName), std::move(name), value);
+    }
+};
+
+template<>
+struct visitorSelector<true> {
+    template<typename T, class Visitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, Visitor &visitor) {
+        visitor.visit(fieldIdentifier, std::move(typeName), std::move(name), value);
+    }
+};
+
+template<typename T>
+struct isVisitable {
+    static const bool value = false;
+};
+
+template<typename T, class Visitor>
+void doVisit(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, Visitor &visitor) {
+    visitorSelector<isVisitable<T>::value >::impl(fieldIdentifier, std::move(typeName), std::move(name), value, visitor);
+}
+#endif
+
+#ifndef TRIPLET_FORWARD_VISITABLE_TYPE_TRAIT
+#define TRIPLET_FORWARD_VISITABLE_TYPE_TRAIT
+#include <cstdint>
+#include <string>
+#include <utility>
+
+template<bool b>
+struct tripletForwardVisitorSelector {
+    template<typename T, class PreVisitor, class Visitor, class PostVisitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+        (void)preVisit;
+        (void)postVisit;
+        std::forward<Visitor>(visit)(fieldIdentifier, std::move(typeName), std::move(name), value);
+    }
+};
+
+template<>
+struct tripletForwardVisitorSelector<true> {
+    template<typename T, class PreVisitor, class Visitor, class PostVisitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+        (void)fieldIdentifier;
+        (void)typeName;
+        (void)name;
+        // Apply preVisit, visit, and postVisit on value.
+        value.accept(preVisit, visit, postVisit);
+    }
+};
+
+template<typename T>
+struct isTripletForwardVisitable {
+    static const bool value = false;
+};
+
+template< typename T, class PreVisitor, class Visitor, class PostVisitor>
+void doTripletForwardVisit(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+    tripletForwardVisitorSelector<isTripletForwardVisitable<T>::value >::impl(fieldIdentifier, std::move(typeName), std::move(name), value, std::move(preVisit), std::move(visit), std::move(postVisit)); // NOLINT
+}
+#endif
+
+
+#ifndef OPENDLV_ROBO_CONELOCATION_HPP
+#define OPENDLV_ROBO_CONELOCATION_HPP
+
+#ifdef WIN32
+    // Export symbols if compile flags "LIB_SHARED" and "LIB_EXPORTS" are set on Windows.
+    #ifdef LIB_SHARED
+        #ifdef LIB_EXPORTS
+            #define LIB_API __declspec(dllexport)
+        #else
+            #define LIB_API __declspec(dllimport)
+        #endif
+    #else
+        // Disable definition if linking statically.
+        #define LIB_API
+    #endif
+#else
+    // Disable definition for non-Win32 systems.
+    #define LIB_API
+#endif
+
+#include <string>
+#include <utility>
+namespace opendlv { namespace robo {
+using namespace std::string_literals; // NOLINT
+class LIB_API ConeLocation {
+    private:
+        static constexpr const char* TheShortName = "ConeLocation";
+        static constexpr const char* TheLongName = "opendlv.robo.ConeLocation";
+
+    public:
+        inline static int32_t ID() {
+            return 9003;
+        }
+        inline static const std::string ShortName() {
+            return TheShortName;
+        }
+        inline static const std::string LongName() {
+            return TheLongName;
+        }
+
+    public:
+        ConeLocation() = default;
+        ConeLocation(const ConeLocation&) = default;
+        ConeLocation& operator=(const ConeLocation&) = default;
+        ConeLocation(ConeLocation&&) = default;
+        ConeLocation& operator=(ConeLocation&&) = default;
+        ~ConeLocation() = default;
+
+    public:
+        inline ConeLocation& data(const std::string &v) noexcept {
+            m_data = v;
+            return *this;
+        }
+        inline std::string data() const noexcept {
+            return m_data;
+        }
+
+    public:
+        template<class Visitor>
+        inline void accept(uint32_t fieldId, Visitor &visitor) {
+            (void)fieldId;
+            (void)visitor;
+//            visitor.preVisit(ID(), ShortName(), LongName());
+            if (1 == fieldId) {
+                doVisit(1, std::move("std::string"s), std::move("data"s), m_data, visitor);
+                return;
+            }
+//            visitor.postVisit();
+        }
+
+        template<class Visitor>
+        inline void accept(Visitor &visitor) {
+            visitor.preVisit(ID(), ShortName(), LongName());
+            doVisit(1, std::move("std::string"s), std::move("data"s), m_data, visitor);
+            visitor.postVisit();
+        }
+
+        template<class PreVisitor, class Visitor, class PostVisitor>
+        inline void accept(PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+            (void)visit; // Prevent warnings from empty messages.
+            std::forward<PreVisitor>(preVisit)(ID(), ShortName(), LongName());
+            doTripletForwardVisit(1, std::move("std::string"s), std::move("data"s), m_data, preVisit, visit, postVisit);
+            std::forward<PostVisitor>(postVisit)();
+        }
+
+    private:
+        std::string m_data{ ""s }; // field identifier = 1.
+};
+}}
+
+template<>
+struct isVisitable<opendlv::robo::ConeLocation> {
+    static const bool value = true;
+};
+template<>
+struct isTripletForwardVisitable<opendlv::robo::ConeLocation> {
     static const bool value = true;
 };
 #endif

@@ -8,9 +8,10 @@ state "AimpointDriver" as ad   : Follows path created by\ncones in constant velo
 
 cf --> cd
 cf --> kd
-kd --> ap
+
+kd --> ap : RelativeBearing
 cd --> ap
-ap --> ad
+ap --> ad : DriveState
 cd --> ad
 
 @enduml Microservice
