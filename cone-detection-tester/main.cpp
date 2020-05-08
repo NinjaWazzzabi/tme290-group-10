@@ -22,106 +22,106 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <vector>
 
 #define SAVE_PATH "../imgs/result.png"
 
 using namespace cv;
 
+
+void MatchingMethod( int, void* , Mat img, Mat templ );
+
 int32_t main(int32_t argc, char **argv)
 {
 	CommandLineParser parser(argc, argv, "{@input | lena.jpg | input image}");
-	Mat img = imread(samples::findFile(parser.get<String>("@input")), IMREAD_COLOR);
+	Mat img = imread(samples::findFile(parser.get<String>("@input")), IMREAD_GRAYSCALE);
+	Mat templ = imread("../imgs/capture.png", IMREAD_GRAYSCALE);
 	if (img.empty())
 	{
 		std::cout << "Could not open or find the image!\n"
 			 << std::endl;
 		std::cout << "Usage: " << argv[0] << " <Input image>" << std::endl;
 		return -1;
+	}	
+	
+	GaussianBlur( img, img, Size(3,3), 0, 0, BORDER_DEFAULT );
+	
+	// Canny Detection
+	Mat canny;
+	Canny(img, canny, 30, 100, 3);
+
+	// Masking car and top half of picture
+	rectangle(canny, Point(img.cols/5,img.rows-200), Point(img.cols*4/5,img.rows), Scalar(0,0,0), -1, 8);
+	rectangle(canny, Point(0,0), Point(img.cols,img.rows*9/16), Scalar(0,0,0), -1, 8);
+
+
+	MatchingMethod( 0, 0 ,canny, templ);
+
+}
+
+void MatchingMethod( int, void*, Mat img, Mat templPre )
+{
+
+	Mat templ;
+	templPre.convertTo(templ, img.type());
+
+	/// Source image to display
+	Mat img_display;
+	img.copyTo( img_display );
+
+	Mat result;
+
+	/// Do the Matching and Normalize
+	matchTemplate( img, templ, result, 4 );
+	normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
+
+	
+	float threshold = 0.8;
+	
+	std::vector<Point> top_positions;
+
+	// Find Positions of best matches
+	for(int i = 0; i < result.rows -1; ++i)
+	{
+		for(int j = 0; j < result.cols - 1; ++j)
+		{
+			float pixel = result.at<float>(i, j);
+			if (pixel >= threshold)
+			{
+				std::cout << "Pos: " << i << ", " << j << " Threshold: " << pixel << std::endl;
+				top_positions.push_back(Point(j,i));
+			}
+		}
 	}
 
-	// equalizeHist(img, img);
-	// Mat croppedFrame(img, Rect(0, 270, 1278, 450));
-
-	// Mask out the front of the kiwi
-	rectangle(img, Point(240,718), Point(1000,600), Scalar(0,0,0), -1, 8);
-
-	GaussianBlur( img, img, Size(3,3), 0, 0, BORDER_DEFAULT );
-	Mat src_gray;
-	cvtColor(img, src_gray, COLOR_BGR2GRAY);
-
-	// Homemade Diagonal filter
-	Mat dst1,dst2,abs_dst1,abs_dst2,diag_filtered;
-
-	float m1[9] = {0,1,2,-1,0,1,-2,-1,0};
-	Mat kernelOne(Size(3,3), CV_32F, m1);
-
-	float m2[9] = {-2,-1,0,-1,0,1,0,1,2};
-	Mat kernelTwo(Size(3,3), CV_32F, m2);
-
-	filter2D(src_gray, dst1, -1, kernelOne);
-	filter2D(src_gray, dst2, -1, kernelTwo);
-
-	convertScaleAbs( dst1, abs_dst1 );
-	convertScaleAbs( dst2, abs_dst2 );
-
-
-	addWeighted( abs_dst1, 0.5, abs_dst2, 0.5, 0, diag_filtered );
-
-
-
-
-	Mat hsv;
-	cvtColor(img, hsv, COLOR_BGR2HSV);
-	Scalar hsvLow(110, 40, 40);
-	Scalar hsvHi(130, 255, 255);
-	Mat blueCones;
-	inRange(hsv, hsvLow, hsvHi, blueCones);
-
-	uint32_t iterations{5};
-	Mat dilate;
-	cv::dilate(blueCones, dilate, Mat(), Point(-1, -1), iterations, 1, 1);
-
-	Mat erode;
-	cv::erode(dilate, erode, Mat(), Point(-1, -1), iterations, 1, 1);
-
-	Mat result = diag_filtered;
-
-	// Canny Detection
-	/*Mat canny;
-	Canny(croppedFrame, canny, 30, 90, 3);
-
-	std::vector<Vec2f> lines;
-	HoughLines(canny, lines, 1, CV_PI/180, 150, 0, 0);
-
-	//Draw the lines
-	Mat hough;
-	cvtColor(canny, hough, COLOR_GRAY2BGR);
-	for(size_t i = 0; i < lines.size(); i++)
+	// Draw rectangle around best matches.
+	for (Point pos : top_positions)
 	{
-		float rho = lines[i][0];
-		float theta = lines [i][1];
-		double a = cos(theta);
-		double b = sin(theta);
-		double x0 = a * rho;
-		double y0 = b * rho;
+		std::cout << "Point: " << pos.x << ", " << pos.y << std::endl;
+		rectangle( img_display, pos, Point( pos.x + templ.cols , pos.y + templ.rows ), Scalar(255,255,255),  2, 8, 0 );
+		rectangle( result, pos, Point( pos.x + templ.cols , pos.y + templ.rows ), Scalar(255,255,255),  2, 8, 0);			
+	}
 
-		Point pt1;
-		Point pt2;
-		pt1.x = cvRound(x0 + 1000 * (-b));
-		pt1.y = cvRound(y0 + 1000 * a);
-		pt2.x = cvRound(x0 - 1000 * (-b));
-		pt2.y = cvRound(y0 - 1000 * a);
-		line(hough, pt1, pt2, Scalar(0,255,255), 3, LINE_AA);
-	}*/
 
-	// // Invert colors
-	// bitwise_not(img, img);
+	/// Localizing the best match with minMaxLoc
+	double minVal; double maxVal; Point minLoc; Point maxLoc;
+	Point matchLoc;
 
-	// // Draw a red rectangle
-	// rectangle(img, Point(50, 50), Point(100, 100), Scalar(0,0,255));
+	minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
+	matchLoc = maxLoc;
+	std::cout << matchLoc.x << ", " << matchLoc.y << "  Val:  " << maxVal << std::endl;
 
-	// Display image.
+
+
+	/// Draw rectangle
+	rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255,255,255), 2, 8, 0 );
+	rectangle( result, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255,255,255), 2, 8, 0 );
+	
+
 	imwrite( SAVE_PATH, img);
-	imshow("Image", result);
+	imshow("result", result);
+	imshow("Image", img_display);
 	waitKey(100000);
+
+  return;
 }
