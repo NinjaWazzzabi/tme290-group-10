@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-FROM ubuntu:18.04 as builder
+FROM eigen-opencv-builder as builder
 ENV DEBIAN_FRONTEND=noninteractive 
 
 RUN apt-get update
@@ -34,22 +34,8 @@ RUN export DISPLAY=172.22.32.1:0.0 && mkdir build && \
     cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/tmp/dest .. && \
     make && make install
 
-
-FROM ubuntu:18.04
-ENV DEBIAN_FRONTEND=noninteractive 
-
-RUN apt-get update
-RUN apt-get install -y \
-    libopencv-core3.2 \
-    libopencv-imgproc3.2 \
-    libopencv-video3.2 \
-    libopencv-calib3d3.2 \
-    libopencv-features2d3.2 \
-    libopencv-objdetect3.2 \
-    libopencv-highgui3.2 \
-    libopencv-videoio3.2 \
-    libopencv-flann3.2 \
-    python3-opencv
+FROM eigen-opencv-builder
+ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /usr/bin
 RUN export DISPLAY=172.22.32.1:0.0
