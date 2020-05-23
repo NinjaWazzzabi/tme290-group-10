@@ -34,7 +34,7 @@ void MatchingMethod( int, void* , Mat img, Mat templ );
 int32_t main(int32_t argc, char **argv)
 {
 	CommandLineParser parser(argc, argv, "{@input | lena.jpg | input image}");
-	Mat img = imread(samples::findFile(parser.get<String>("@input")), IMREAD_GRAYSCALE);
+	Mat img = imread(samples::findFile(parser.get<String>("@input")), CV_8UC4);
 	Mat templ = imread("../imgs/capture.png", IMREAD_GRAYSCALE);
 	if (img.empty())
 	{
@@ -44,8 +44,7 @@ int32_t main(int32_t argc, char **argv)
 		return -1;
 	}	
 	
-	GaussianBlur( img, img, Size(3,3), 0, 0, BORDER_DEFAULT );
-	
+	/*
 	// Canny Detection
 	Mat canny;
 	Canny(img, canny, 30, 100, 3);
@@ -56,6 +55,102 @@ int32_t main(int32_t argc, char **argv)
 
 
 	MatchingMethod( 0, 0 ,canny, templ);
+	*/
+	Rect myROI(0, img.rows*9.4/16, img.cols, img.rows*4.2/16);
+	Mat croppedImage = img(myROI);
+
+	GaussianBlur( croppedImage, croppedImage, Size(3,3), 0, 0, BORDER_DEFAULT );
+
+	Mat  hsv;
+	cvtColor(croppedImage , hsv , cv::COLOR_BGR2HSV );
+
+
+ 	std::vector<Mat> planes;
+	split(hsv, planes);
+	Scalar avg( cv::mean(planes[0])[0], cv::mean(planes[1])[0], cv::mean(planes[2])[0] );
+
+	Scalar  hsvLow(avg[0] - 40, avg[1] - 20, avg[2] - 50);
+	Scalar  hsvHi(avg[0] + 40, avg[1] + 40, avg[2] + 80);
+
+	
+  
+	std::cout << avg << std::endl;
+	std::cout << hsvLow << std::endl;
+
+
+	Mat1b  background_filter_inv;
+	inRange(hsv , hsvLow , hsvHi , background_filter_inv );
+
+	
+	Mat1b  background_filter;
+	bitwise_not(background_filter_inv, background_filter);
+
+	Mat res = croppedImage;
+	bitwise_and(croppedImage,croppedImage, res, background_filter);
+
+	Scalar  bluLow(100,40,40);
+	Scalar  bluHi(130,255,255);
+
+	Mat blue_mask;
+	inRange(hsv , bluLow , bluHi , blue_mask);
+
+	Mat blue_cones;
+	bitwise_and(res,res, blue_cones, blue_mask);
+
+
+	Scalar  yellowLow(20,41,50);
+	Scalar  yellowHi(40,255,255);
+
+	Mat yellow_mask;
+	inRange(hsv,yellowLow,yellowHi, yellow_mask);
+
+	Mat cones_mask;
+	bitwise_or(blue_mask,yellow_mask,cones_mask);
+
+	Mat cones;
+	bitwise_and(res, res, cones, cones_mask);
+
+
+	Mat  dilate;
+	uint32_t  iterations = 3;
+	cv::dilate(cones_mask , dilate , Mat(), Point(-1,  -1), iterations , 1, 1);
+	Mat  erode;
+	cv::erode(dilate , erode , Mat(), Point(-1,  -1), iterations , 1, 1);
+
+	cones_mask = erode;
+
+	Mat canny_out;
+	Canny( cones_mask, canny_out, 30, 90, 3 );
+
+
+	std::vector<std::vector<Point>> contours;
+	std::vector<Vec4i> hierarchy;
+	std::vector<Rect> boundRect( contours.size() );
+	findContours( canny_out, contours, hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, Point(0, 0) );
+	//RNG rng(12345);
+	//Mat drawing = Mat::zeros( canny_out.size(), CV_8UC3 );
+	for( int i = 0; i < (int) contours.size(); i++ )
+	{
+		std::vector<Point> contour_poly;
+        approxPolyDP( contours.at(i), contour_poly, 3, true );
+		Scalar color = Scalar( 255,255,255 );
+		//drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
+		rectangle( res, boundingRect( contours.at(i)).tl(), boundingRect( contours.at(i)).br(), color, 2 );
+
+	}
+
+
+	imwrite( SAVE_PATH, img);
+	imshow("img",img); 
+	imshow("hsv",hsv); 
+	imshow("mask",background_filter); 
+	imshow("blue_mask",blue_mask);
+	imshow("yellow_mask",yellow_mask);
+	imshow("cones_mask",cones_mask);
+	imshow("cones",cones);
+	imshow( "Contours", res );
+	waitKey(100000);
+
 
 }
 
@@ -76,7 +171,7 @@ void MatchingMethod( int, void*, Mat img, Mat templPre )
 	normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
 
 	
-	float threshold = 0.8;
+	float threshold = 0.85;
 	
 	std::vector<Point> top_positions;
 
@@ -88,7 +183,6 @@ void MatchingMethod( int, void*, Mat img, Mat templPre )
 			float pixel = result.at<float>(i, j);
 			if (pixel >= threshold)
 			{
-				std::cout << "Pos: " << i << ", " << j << " Threshold: " << pixel << std::endl;
 				top_positions.push_back(Point(j,i));
 			}
 		}
@@ -97,7 +191,6 @@ void MatchingMethod( int, void*, Mat img, Mat templPre )
 	// Draw rectangle around best matches.
 	for (Point pos : top_positions)
 	{
-		std::cout << "Point: " << pos.x << ", " << pos.y << std::endl;
 		rectangle( img_display, pos, Point( pos.x + templ.cols , pos.y + templ.rows ), Scalar(255,255,255),  2, 8, 0 );
 		rectangle( result, pos, Point( pos.x + templ.cols , pos.y + templ.rows ), Scalar(255,255,255),  2, 8, 0);			
 	}
@@ -109,7 +202,6 @@ void MatchingMethod( int, void*, Mat img, Mat templPre )
 
 	minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
 	matchLoc = maxLoc;
-	std::cout << matchLoc.x << ", " << matchLoc.y << "  Val:  " << maxVal << std::endl;
 
 
 

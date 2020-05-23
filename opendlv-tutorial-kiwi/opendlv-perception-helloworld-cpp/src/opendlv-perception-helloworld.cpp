@@ -26,6 +26,9 @@
 #include <memory>
 #include <mutex>
 
+void MatchingMethod( int, void*, Mat img, Mat templPre, bool show_image);
+
+
 int32_t main(int32_t argc, char **argv)
 {
 	int32_t retCode{1};
@@ -91,10 +94,13 @@ int32_t main(int32_t argc, char **argv)
 			// Finally, we register our lambda for the message identifier for opendlv::proxy::DistanceReading.
 			od4.dataTrigger(opendlv::proxy::DistanceReading::ID(), onDistance);
 
+			Mat templ = imread("../imgs/template.png", IMREAD_GRAYSCALE);
+
+
 			// Endless loop; end the program by pressing Ctrl-C.
 			while (od4.isRunning())
 			{
-				cv::Mat img;
+				 Mat img;
 
 				// Wait for a notification of a new frame.
 				sharedMemory->wait();
@@ -107,38 +113,52 @@ int32_t main(int32_t argc, char **argv)
 					// the camera to provide the next frame. Thus, any
 					// computationally heavy algorithms should be placed outside
 					// lock/unlock
-					cv::Mat wrapped(HEIGHT, WIDTH, CV_8UC4, sharedMemory->data());
+					 Mat wrapped(HEIGHT, WIDTH, CV_8UC4, sharedMemory->data());
 					img = wrapped.clone();
 				}
 				sharedMemory->unlock();
 
-				// cv::equalizeHist(img, img);
-				cv::Mat croppedFrame(img, cv::Rect(0, 270, 1280, 450));
-
-				cv::Mat hsv;
-				cv::cvtColor(croppedFrame, hsv, cv::COLOR_BGR2HSV);
-				cv::Scalar hsvLow(110, 40, 40);
-				cv::Scalar hsvHi(130, 255, 255);
-				cv::Mat blueCones;
-				cv::inRange(hsv, hsvLow, hsvHi, blueCones);
-
-				uint32_t iterations{5};
-				cv::Mat dilate;
-				cv::dilate(blueCones, dilate, cv::Mat(), cv::Point(-1, -1), iterations, 1, 1);
-
-				cv::Mat erode;
-				cv::erode(dilate, erode, cv::Mat(), cv::Point(-1, -1), iterations, 1, 1);
+				cvtColor(img, img, cv::COLOR_BGR2GRAY);
+				GaussianBlur( img, img, Size(3,3), 0, 0, BORDER_DEFAULT );
 
 				// Canny Detection
-				/*cv::Mat canny;
-                cv::Canny(croppedFrame, canny, 30, 90, 3);
+				Mat canny;
+				Canny(img, canny, 30, 100, 3);
 
-                std::vector<cv::Vec2f> lines;
-                cv::HoughLines(canny, lines, 1, CV_PI/180, 150, 0, 0);
+				// Masking car and top half of picture
+				rectangle(canny, Point(img.cols/5,img.rows-200), Point(img.cols*4/5,img.rows), Scalar(0,0,0), -1, 8);
+				rectangle(canny, Point(0,0), Point(img.cols,img.rows*9/16), Scalar(0,0,0), -1, 8);
+
+				MatchingMethod( 0, 0 ,canny, templ, VERBOSE);
+
+
+				//  equalizeHist(img, img);
+				/*Mat croppedFrame(img,  Rect(0, 270, 1280, 450));
+
+				 Mat hsv;
+				 cvtColor(croppedFrame, hsv,  COLOR_BGR2HSV);
+				 Scalar hsvLow(110, 40, 40);
+				 Scalar hsvHi(130, 255, 255);
+				 Mat blueCones;
+				 inRange(hsv, hsvLow, hsvHi, blueCones);
+
+				uint32_t iterations{5};
+				 Mat dilate;
+				 dilate(blueCones, dilate,  Mat(),  Point(-1, -1), iterations, 1, 1);
+
+				 Mat erode;
+				 erode(dilate, erode,  Mat(),  Point(-1, -1), iterations, 1, 1);
+
+				// Canny Detection
+				 Mat canny;
+                 Canny(croppedFrame, canny, 30, 90, 3);
+
+                std::vector< Vec2f> lines;
+                 HoughLines(canny, lines, 1, CV_PI/180, 150, 0, 0);
 
                 //Draw the lines
-                cv::Mat hough;
-                cv::cvtColor(canny, hough, cv::COLOR_GRAY2BGR);
+                 Mat hough;
+                 cvtColor(canny, hough,  COLOR_GRAY2BGR);
                 for(size_t i = 0; i < lines.size(); i++)
                 {
                     float rho = lines[i][0];
@@ -148,26 +168,26 @@ int32_t main(int32_t argc, char **argv)
                     double x0 = a * rho;
                     double y0 = b * rho;
 
-                    cv::Point pt1;
-                    cv::Point pt2;
+                     Point pt1;
+                     Point pt2;
                     pt1.x = cvRound(x0 + 1000 * (-b));
                     pt1.y = cvRound(y0 + 1000 * a);
                     pt2.x = cvRound(x0 - 1000 * (-b));
                     pt2.y = cvRound(y0 - 1000 * a);
-                    cv::line(hough, pt1, pt2, cv::Scalar(0,255,255), 3, cv::LINE_AA);
+                     line(hough, pt1, pt2,  Scalar(0,255,255), 3,  LINE_AA);
                 }*/
 
 				// // Invert colors
-				// cv::bitwise_not(img, img);
+				//  bitwise_not(img, img);
 
 				// // Draw a red rectangle
-				// cv::rectangle(img, cv::Point(50, 50), cv::Point(100, 100), cv::Scalar(0,0,255));
+				//  rectangle(img,  Point(50, 50),  Point(100, 100),  Scalar(0,0,255));
 
 				// Display image.
 				if (VERBOSE)
 				{
-					cv::imshow(sharedMemory->name().c_str(), erode);
-					cv::waitKey(1);
+					 imshow(sharedMemory->name().c_str(), erode);
+					 waitKey(1);
 				}
 
 				////////////////////////////////////////////////////////////////
@@ -206,4 +226,66 @@ int32_t main(int32_t argc, char **argv)
 		retCode = 0;
 	}
 	return retCode;
+}
+
+
+void MatchingMethod( int, void*, Mat img, Mat templPre, bool show_image)
+{
+
+	Mat templ;
+	templPre.convertTo(templ, img.type());
+
+	/// Source image to display
+	Mat img_display;
+	img.copyTo( img_display );
+
+	Mat result;
+
+	/// Do the Matching and Normalize
+	matchTemplate( img, templ, result, 4 );
+	normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
+
+	
+	float threshold = 0.8f;
+	
+	std::vector<Point> top_positions;
+
+	// Find Positions of best matches
+	for(int i = 0; i < result.rows -1; ++i)
+	{
+		for(int j = 0; j < result.cols - 1; ++j)
+		{
+			float pixel = result.at<float>(i, j);
+			if (pixel >= threshold)
+			{
+				std::cout << "Pos: " << i << ", " << j << " Threshold: " << pixel << std::endl;
+				top_positions.push_back(Point(j,i));
+			}
+		}
+	}
+
+	if (show_image)
+	{
+
+		// Draw rectangle around best matches.
+		for (Point pos : top_positions)
+		{
+			rectangle( img_display, pos, Point( pos.x + templ.cols , pos.y + templ.rows ), Scalar(255,255,255),  2, 8, 0 );
+			rectangle( result, pos, Point( pos.x + templ.cols , pos.y + templ.rows ), Scalar(255,255,255),  2, 8, 0);			
+		}
+
+		/// Localizing the best match with minMaxLoc
+		double minVal; double maxVal; Point minLoc; Point maxLoc;
+		Point matchLoc;
+		minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
+		matchLoc = maxLoc;
+
+		/// Draw rectangle
+		rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255,255,255), 2, 8, 0 );
+		rectangle( result, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255,255,255), 2, 8, 0 );
+		
+		imshow("Image", img_display);
+		waitKey(1);
+	}
+  return;
 }

@@ -13,7 +13,11 @@ services:
             - DISPLAY=${DISPLAY}
     cone-detection:
         image: cone-detection
+        restart: on-failure
         network_mode: "host"
+        ipc: "host"
+        volumes:
+            - /tmp:/tmp
         environment:
             - DISPLAY=${DISPLAY}
     kiwi-detection:

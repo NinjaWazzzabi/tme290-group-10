@@ -1,5 +1,6 @@
 #include "cluon-complete.hpp"
 #include "messages.hpp"
+#include "cone_coder.hpp"
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -11,18 +12,23 @@
 
 using namespace cv;
 
+#define PI = 3.141592653
+
 void MatchingMethod( int, void* , Mat img, Mat templ, bool show_image );
 
+ConeMeasurment extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES, uint32_t WIDTH, uint32_t HEIGHT);
 
 int32_t main(int32_t , char **)
 {
 	int32_t retCode{1};
 
+	const double TO_DEGREES{180 / 3.141592653589793};
 	const std::string NAME{"img.argb"};
 	const uint32_t WIDTH{1280};
 	const uint32_t HEIGHT{720};
 	const bool VERBOSE{true};
-	const uint32_t CID{111};
+	const uint16_t CID{111};
+	const Point CAMERA_POS = Point(WIDTH/2, HEIGHT);
 
 
 	// Attach to the shared memory.
@@ -69,7 +75,7 @@ int32_t main(int32_t , char **)
 
 
 		// Loading template image for matching
-		Mat templ = imread("../imgs/template.png", IMREAD_GRAYSCALE);
+		//Mat templ = imread("../imgs/template.png", IMREAD_GRAYSCALE);
 
 		while (od4.isRunning())
 		{
@@ -90,7 +96,7 @@ int32_t main(int32_t , char **)
 				img = wrapped.clone();
 			}
 			sharedMemory->unlock();
-
+			/*
 			cvtColor(img, img, cv::COLOR_BGR2GRAY);
 			GaussianBlur( img, img, Size(3,3), 0, 0, BORDER_DEFAULT );
 
@@ -103,7 +109,96 @@ int32_t main(int32_t , char **)
 			rectangle(canny, Point(0,0), Point(img.cols,img.rows*9/16), Scalar(0,0,0), -1, 8);
 
 			MatchingMethod( 0, 0 ,canny, templ, VERBOSE);
+			*/
 
+
+			Rect myROI(0, img.rows*9.4/16, img.cols, img.rows*4.2/16);
+			Mat croppedImage = img(myROI);
+
+			//GaussianBlur( croppedImage, croppedImage, Size(3,3), 0, 0, BORDER_DEFAULT );
+
+			Mat  hsv;
+			cvtColor(croppedImage , hsv , cv::COLOR_BGR2HSV );
+
+			//Blue filter
+			Scalar  bluLow(100,110,30);
+			Scalar  bluHi(140,255,255);
+
+			Mat blue_mask;
+			inRange(hsv , bluLow , bluHi , blue_mask);
+
+
+			//Yellow filter
+			Scalar  yellowLow(15,60,60);
+			Scalar  yellowHi(41,255,255);
+
+			Mat yellow_mask;
+			inRange(hsv,yellowLow,yellowHi, yellow_mask);
+
+			//Cone filter
+			Mat cones_mask;
+			bitwise_or(blue_mask,yellow_mask,cones_mask);
+
+
+
+			// Remove "holes" in yellow cones
+			Mat  yellow_dilate;
+			uint32_t  iterations = 5;
+			cv::dilate(yellow_mask , yellow_dilate , Mat(), Point(-1,  -1), iterations , 1, 1);
+			Mat  yellow_erode;
+			cv::erode(yellow_dilate , yellow_erode , Mat(), Point(-1,  -1), iterations, 1, 1);
+			yellow_mask = yellow_erode;
+			
+			// Remove "holes" in blue cones
+			Mat  blue_dilate;
+			cv::dilate(blue_mask , blue_dilate , Mat(), Point(-1,  -1), iterations , 1, 1);
+			Mat  blue_erode;
+			cv::erode(blue_dilate , blue_erode , Mat(), Point(-1,  -1), iterations, 1, 1);
+			blue_mask = blue_erode;
+
+
+			// Edge Detection
+			//Mat canny_out;
+			//Canny( mask, canny_out, 30, 90, 3 );
+
+
+			std::vector<ConeMeasurment> cone_data;
+
+
+			// Find Yellow Contours
+			std::vector<std::vector<Point>> yellow_contours;
+			std::vector<Vec4i> yellow_hierarchy;
+			findContours( yellow_mask, yellow_contours, yellow_hierarchy, cv::RETR_EXTERNAL , cv::CHAIN_APPROX_SIMPLE, Point(0, 0) );
+			
+			for( int i = 0; i < (int) yellow_contours.size(); i++ )
+			{
+				Rect yellow_bounding_rect = boundingRect( yellow_contours.at(i));
+				if (yellow_bounding_rect.width * 1.1 <=  yellow_bounding_rect.height)
+				{
+					if (yellow_bounding_rect.width * yellow_bounding_rect.height > 250 && yellow_bounding_rect.width * yellow_bounding_rect.height < 6000 )
+					{
+						cone_data.push_back(extractConeData(yellow_bounding_rect, 1,CAMERA_POS,TO_DEGREES,WIDTH, HEIGHT));
+						rectangle( croppedImage, yellow_bounding_rect.tl(), yellow_bounding_rect.br(), Scalar( 255,255,255 ), 2 );
+					}
+				}
+			}
+
+			std::vector<std::vector<Point>> blue_contours;
+			std::vector<Vec4i> blue_hierarchy;
+			findContours( blue_mask, blue_contours, blue_hierarchy, cv::RETR_EXTERNAL , cv::CHAIN_APPROX_SIMPLE, Point(0, 0) );
+
+			for( int i = 0; i < (int) blue_contours.size(); i++ )
+			{
+				Rect blue_bounding_rect = boundingRect( blue_contours.at(i));
+				if (blue_bounding_rect.width * 1.1 <=  blue_bounding_rect.height)
+				{
+					if (blue_bounding_rect.width * blue_bounding_rect.height > 250 && blue_bounding_rect.width * blue_bounding_rect.height < 6000 )
+					{
+						cone_data.push_back(extractConeData(blue_bounding_rect, 2,CAMERA_POS,TO_DEGREES,WIDTH,HEIGHT));
+						rectangle( croppedImage, blue_bounding_rect.tl(), blue_bounding_rect.br(), Scalar( 255,255,255 ), 2 );
+					}
+				}
+			}
 
 
 			////////////////////////////////////////////////////////////////
@@ -115,10 +210,35 @@ int32_t main(int32_t , char **)
 							<< "left = " << left << ", "
 							<< "right = " << right << "." << std::endl;
 			}
+			if (VERBOSE)
+			{	
+
+				if (cone_data.size() > 0)
+				{
+					for (ConeMeasurment c : cone_data)
+					{
+					std::cout << "Bearing:  " << c.relative_bearing() << "  DISTANCE:  " << c.distance() <<  "  Type:  " << c.type() <<  std::endl;
+
+					}
+				}
+				imshow(sharedMemory->name().c_str(), img);
+				imshow("cropped", croppedImage);
+				imshow("mask", cones_mask);
+				waitKey(1);
+			}
 		}
 	}
 	retCode = 0;
 	return retCode;
+}
+
+ConeMeasurment extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES, uint32_t WIDTH,  uint32_t HEIGHT)
+{
+	Point center = Point(bbox.x + bbox.width/2, HEIGHT - (bbox.y + bbox.height/2) ); 
+	float angle = atan2(center.y, center.x - CAMERA_POS.x) * TO_DEGREES;
+	angle = 90 - angle;
+	return ConeMeasurment(angle, center.y, type);
+
 }
 
 
