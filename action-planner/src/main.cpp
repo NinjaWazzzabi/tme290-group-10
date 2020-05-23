@@ -33,17 +33,18 @@ int32_t main(int32_t, char **)
 		}
 	}};
 
-	auto cone_list_listener{[&global_traffic_msg, &global_traffic_msg_timestamp, &m_external_data](cluon::data::Envelope &&envelope) {
+	auto traffic_listener{[&global_traffic_msg, &global_traffic_msg_timestamp, &m_external_data](cluon::data::Envelope &&envelope) {
 		auto traffic_msg = cluon::extractMessage<opendlv::robo::TrafficLocation>(std::move(envelope));
 		{
 			std::lock_guard<std::mutex> lock(m_external_data);
-			global_traffic_msg_timestamp = cluon::time::toMicroseconds(cluon::time::now();
+			global_traffic_msg_timestamp = cluon::time::toMicroseconds(cluon::time::now());
 			global_traffic_msg = traffic_msg;
 		}
 	}};
 
 	cluon::OD4Session od4{CID};
 	od4.dataTrigger(opendlv::robo::ConeLocation::ID(), cone_list_listener);
+	od4.dataTrigger(opendlv::robo::TrafficLocation::ID(), traffic_listener);
 
 	auto decision_runner{[&]() -> bool {
 
