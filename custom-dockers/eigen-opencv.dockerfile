@@ -1,9 +1,10 @@
 FROM ubuntu:18.04
 ENV DEBIAN_FRONTEND=noninteractive 
 
-RUN apt-get update
+RUN apt-get update --fix-missing
 RUN apt-get install -y \
-	# pkg-config \
+	libgtk2.0-dev \
+	pkg-config \
 	cmake \
 	g++ \
 	make \
@@ -19,7 +20,7 @@ run git clone https://github.com/opencv/opencv.git && \
 	cd opencv && \
 	mkdir build && \
 	cd build && \
-	cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local ..
+	cmake -D CMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DOPENCV_GENERATE_PKGCONFIG=ON ..
 run cd opencv/build && \
 	make -j7
 run cd opencv/build && \
