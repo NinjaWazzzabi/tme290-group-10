@@ -12,8 +12,6 @@
 
 using namespace cv;
 
-#define PI = 3.141592653
-
 void MatchingMethod( int, void* , Mat img, Mat templ, bool show_image );
 
 ConeMeasurment extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES, uint32_t WIDTH, uint32_t HEIGHT);
@@ -39,6 +37,8 @@ int32_t main(int32_t , char **)
 
 		// Interface to a running OpenDaVINCI session; here, you can send and receive messages.
 		cluon::OD4Session od4{CID};
+
+		
 
 		// Handler to receive distance readings (realized as C++ lambda).
 		std::mutex distancesMutex;
@@ -96,34 +96,20 @@ int32_t main(int32_t , char **)
 				img = wrapped.clone();
 			}
 			sharedMemory->unlock();
-			/*
-			cvtColor(img, img, cv::COLOR_BGR2GRAY);
-			GaussianBlur( img, img, Size(3,3), 0, 0, BORDER_DEFAULT );
-
-			// Canny Detection
-			Mat canny;
-			Canny(img, canny, 30, 100, 3);
-
-			// Masking car and top half of picture
-			rectangle(canny, Point(img.cols/5,img.rows-200), Point(img.cols*4/5,img.rows), Scalar(0,0,0), -1, 8);
-			rectangle(canny, Point(0,0), Point(img.cols,img.rows*9/16), Scalar(0,0,0), -1, 8);
-
-			MatchingMethod( 0, 0 ,canny, templ, VERBOSE);
-			*/
 
 
 			Rect myROI(0, img.rows*9.4/16, img.cols, img.rows*4.2/16);
 			Mat croppedImage = img(myROI);
 
-			//GaussianBlur( croppedImage, croppedImage, Size(3,3), 0, 0, BORDER_DEFAULT );
 
 			Mat  hsv;
 			cvtColor(croppedImage , hsv , cv::COLOR_BGR2HSV );
 
+
+
 			//Blue filter
 			Scalar  bluLow(100,110,30);
 			Scalar  bluHi(140,255,255);
-
 			Mat blue_mask;
 			inRange(hsv , bluLow , bluHi , blue_mask);
 
@@ -131,14 +117,13 @@ int32_t main(int32_t , char **)
 			//Yellow filter
 			Scalar  yellowLow(15,60,60);
 			Scalar  yellowHi(41,255,255);
-
 			Mat yellow_mask;
 			inRange(hsv,yellowLow,yellowHi, yellow_mask);
+
 
 			//Cone filter
 			Mat cones_mask;
 			bitwise_or(blue_mask,yellow_mask,cones_mask);
-
 
 
 			// Remove "holes" in yellow cones
@@ -149,6 +134,7 @@ int32_t main(int32_t , char **)
 			cv::erode(yellow_dilate , yellow_erode , Mat(), Point(-1,  -1), iterations, 1, 1);
 			yellow_mask = yellow_erode;
 			
+
 			// Remove "holes" in blue cones
 			Mat  blue_dilate;
 			cv::dilate(blue_mask , blue_dilate , Mat(), Point(-1,  -1), iterations , 1, 1);
@@ -157,11 +143,7 @@ int32_t main(int32_t , char **)
 			blue_mask = blue_erode;
 
 
-			// Edge Detection
-			//Mat canny_out;
-			//Canny( mask, canny_out, 30, 90, 3 );
-
-
+			// Vector to store cone positions
 			std::vector<ConeMeasurment> cone_data;
 
 
@@ -183,6 +165,8 @@ int32_t main(int32_t , char **)
 				}
 			}
 
+
+			// Find Blue Contours
 			std::vector<std::vector<Point>> blue_contours;
 			std::vector<Vec4i> blue_hierarchy;
 			findContours( blue_mask, blue_contours, blue_hierarchy, cv::RETR_EXTERNAL , cv::CHAIN_APPROX_SIMPLE, Point(0, 0) );
@@ -200,32 +184,26 @@ int32_t main(int32_t , char **)
 				}
 			}
 
+			// Send cone data
+			opendlv::robo::ConeLocation cl;
+			cl.data(ConeCoder::encode(cone_data)); 
+			od4.send(cl);
 
-			////////////////////////////////////////////////////////////////
-			// Do something with the distance readings if wanted.
-			{
-				std::lock_guard<std::mutex> lck(distancesMutex);
-				std::cout << "front = " << front << ", "
-							<< "rear = " << rear << ", "
-							<< "left = " << left << ", "
-							<< "right = " << right << "." << std::endl;
-			}
 			if (VERBOSE)
 			{	
-
 				if (cone_data.size() > 0)
 				{
 					for (ConeMeasurment c : cone_data)
 					{
-					std::cout << "Bearing:  " << c.relative_bearing() << "  DISTANCE:  " << c.distance() <<  "  Type:  " << c.type() <<  std::endl;
-
+						std::cout << "Bearing:  " << c.relative_bearing() << "  DISTANCE:  " << c.distance() <<  "  Type:  " << c.type() <<  std::endl;
 					}
 				}
 				imshow(sharedMemory->name().c_str(), img);
-				imshow("cropped", croppedImage);
-				imshow("mask", cones_mask);
+				//imshow("cropped", croppedImage);
+				//imshow("mask", cones_mask);
 				waitKey(1);
 			}
+
 		}
 	}
 	retCode = 0;
@@ -235,10 +213,8 @@ int32_t main(int32_t , char **)
 ConeMeasurment extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES, uint32_t WIDTH,  uint32_t HEIGHT)
 {
 	Point center = Point(bbox.x + bbox.width/2, HEIGHT - (bbox.y + bbox.height/2) ); 
-	float angle = atan2(center.y, center.x - CAMERA_POS.x) * TO_DEGREES;
-	angle = 90 - angle;
+	float angle = 90 - atan2(center.y, center.x - CAMERA_POS.x) * TO_DEGREES;
 	return ConeMeasurment(angle, center.y, type);
-
 }
 
 
@@ -287,7 +263,7 @@ void MatchingMethod( int, void*, Mat img, Mat templPre, bool show_image)
 			rectangle( result, pos, Point( pos.x + templ.cols , pos.y + templ.rows ), Scalar(255,255,255),  2, 8, 0);			
 		}
 
-		/// Localizing the best match with minMaxLoc
+		/// Find the best match with minMaxLoc
 		double minVal; double maxVal; Point minLoc; Point maxLoc;
 		Point matchLoc;
 		minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
