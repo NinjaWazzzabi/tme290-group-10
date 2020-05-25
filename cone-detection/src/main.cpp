@@ -199,8 +199,8 @@ int32_t main(int32_t , char **)
 					}
 				}
 				imshow(sharedMemory->name().c_str(), img);
-				//imshow("cropped", croppedImage);
-				//imshow("mask", cones_mask);
+				imshow("cropped", croppedImage);
+				imshow("mask", cones_mask);
 				waitKey(1);
 			}
 
