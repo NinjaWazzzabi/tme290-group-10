@@ -22,6 +22,11 @@ services:
             - DISPLAY=${DISPLAY}
     kiwi-detection:
         image: kiwi-detection
+        restart: on-failure
+        network_mode: "host"
+        ipc: "host"
+        volumes:
+            - /tmp:/tmp
         network_mode: "host"
         environment:
             - DISPLAY=${DISPLAY}
