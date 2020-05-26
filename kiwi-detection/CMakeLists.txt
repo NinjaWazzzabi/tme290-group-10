@@ -55,7 +55,7 @@ if(UNIX)
 endif()
 
 # Find and include OpenCV
-find_package(OpenCV REQUIRED core highgui imgproc)
+find_package(OpenCV REQUIRED core highgui imgproc objdetect)
 include_directories(SYSTEM ${OpenCV_INCLUDE_DIRS})
 set(LIBRARIES ${LIBRARIES} ${OpenCV_LIBS})
 

@@ -3,6 +3,7 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/objdetect.hpp>
 
 #include <stdint.h>
 #include <iostream>
@@ -22,6 +23,9 @@ int32_t retCode{1};
 	//const bool VERBOSE{true};
 	const uint16_t CID{111};
 	//const Point CAMERA_POS = Point(WIDTH/2, HEIGHT);
+	CascadeClassifier face_cascade;
+	if(!face_cascade.load( "/usr/bin/cascade.xml" ))
+		std::cout << "ERROR in loading Cascade" << std::endl;
 
 
 	// Attach to the shared memory.
@@ -34,6 +38,7 @@ int32_t retCode{1};
 		cluon::OD4Session od4{CID};
 
 		
+
 
 		// Handler to receive distance readings (realized as C++ lambda).
 		std::mutex distancesMutex;
@@ -90,18 +95,24 @@ int32_t retCode{1};
 			sharedMemory->unlock();
 
 
-			Rect myROI(0, img.rows*8/16, img.cols, img.rows*4.2/16);
-			Mat croppedImage = img(myROI);
+			//Rect myROI(0, img.rows*8/16, img.cols, img.rows*4.2/16);
+			//Mat croppedImage = img(myROI);
 
 
-			Mat  hsv;
-			cvtColor(croppedImage , hsv , cv::COLOR_BGR2HSV );
 
-		
-			Mat canny_out;
-			Canny( hsv, canny_out, 30, 90, 3 );
+			Mat  gray;
+			cv::cvtColor(img , gray , cv::COLOR_BGR2GRAY );
 
-			imshow("edges", canny_out);
+			std::vector<Rect> kiwis;
+			face_cascade.detectMultiScale( gray, kiwis, 1.1, 2, 0, Size(60, 40), Size(300,280) );
+
+			for( size_t i = 0; i < kiwis.size(); i++ )
+			{
+				cv::rectangle(img, Point(kiwis[i].x,kiwis[i].y), Point(kiwis[i].x + kiwis[i].width, kiwis[i].y + kiwis[i].height), Scalar(255,0,0));
+			}
+
+
+			imshow("kiwis", img);
 			waitKey(1);
 
 		}
