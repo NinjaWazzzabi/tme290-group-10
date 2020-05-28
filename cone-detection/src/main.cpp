@@ -1,6 +1,5 @@
 #include "cluon-complete.hpp"
 #include "messages.hpp"
-#include "cone_coder.hpp"
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -10,11 +9,14 @@
 #include <memory>
 #include <mutex>
 
+#include "cone_location.hpp"
+#include "serializer.hpp"
+
 using namespace cv;
 
 void MatchingMethod( int, void* , Mat img, Mat templ, bool show_image );
 
-ConeMeasurment extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES, uint32_t HEIGHT);
+ConeLocation extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES, uint32_t HEIGHT);
 
 int32_t main(int32_t , char **)
 {
@@ -172,7 +174,7 @@ int32_t main(int32_t , char **)
 
 
 			// Vector to store cone positions
-			std::vector<ConeMeasurment> cone_data;
+			std::vector<ConeLocation> cone_data;
 
 
 			// Find Yellow Contours
@@ -234,14 +236,14 @@ int32_t main(int32_t , char **)
 
 			// Send cone data
 			opendlv::robo::ConeLocation cl;
-			cl.data(ConeCoder::encode(cone_data)); 
+			cl.data(Serializer::encode(cone_data)); 
 			od4.send(cl);
 
 			if (VERBOSE)
 			{	
 				if (cone_data.size() > 0)
 				{
-					for (ConeMeasurment c : cone_data)
+					for (ConeLocation c : cone_data)
 					{
 						std::cout << "Bearing:  " << c.relative_bearing() << "  DISTANCE:  " << c.distance() <<  "  Type:  " << c.type() <<  std::endl;
 					}
@@ -258,11 +260,11 @@ int32_t main(int32_t , char **)
 	return retCode;
 }
 
-ConeMeasurment extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES,  uint32_t HEIGHT)
+ConeLocation extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES,  uint32_t HEIGHT)
 {
 	Point center = Point(bbox.x + bbox.width/2, HEIGHT - (bbox.y + bbox.height/2) ); 
 	float angle = 90 - atan2(center.y, center.x - CAMERA_POS.x) * TO_DEGREES;
-	return ConeMeasurment(angle, center.y, type);
+	return ConeLocation(angle, center.y, type);
 }
 
 

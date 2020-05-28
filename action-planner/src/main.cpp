@@ -4,7 +4,8 @@
 #include <vector>
 #include <iostream>
 #include <mutex>
-#include "cone_coder.hpp"
+#include "cone_location.hpp"
+#include "serializer.hpp"
 
 #define CID 111
 #define FREQ 10
@@ -19,13 +20,13 @@
 int32_t main(int32_t, char **)
 {
 	std::mutex m_external_data;
-	std::vector<ConeMeasurment> global_cones;
+	std::vector<ConeLocation> global_cones;
 	opendlv::robo::TrafficLocation global_traffic_msg;
 	uint32_t global_traffic_msg_timestamp;
 
 	auto cone_list_listener{[&global_cones, &m_external_data](cluon::data::Envelope &&envelope) {
 		auto cones_message = cluon::extractMessage<opendlv::robo::ConeLocation>(std::move(envelope));
-		std::vector<ConeMeasurment> cones = ConeCoder::decode(cones_message.data());
+		std::vector<ConeLocation> cones = Serializer::decode<ConeLocation>(cones_message.data());
 		{
 			std::lock_guard<std::mutex> lock(m_external_data);
 			global_cones.clear();
@@ -49,7 +50,7 @@ int32_t main(int32_t, char **)
 	auto decision_runner{[&]() -> bool {
 
 		// Copy variables to local scope
-		std::vector<ConeMeasurment> cones;
+		std::vector<ConeLocation> cones;
 		opendlv::robo::TrafficLocation traffic_msg;
 		uint32_t traffic_msg_timestamp = 0;
 		{
@@ -61,7 +62,7 @@ int32_t main(int32_t, char **)
 
 		// Check if intersection is reached
 		bool intersection_reached = false;
-		for (ConeMeasurment cone : cones)
+		for (ConeLocation cone : cones)
 		{
 			if (cone.type() == CONE_INTERSECTION)
 			{
