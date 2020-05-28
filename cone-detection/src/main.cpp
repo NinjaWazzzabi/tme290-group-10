@@ -14,7 +14,7 @@ using namespace cv;
 
 void MatchingMethod( int, void* , Mat img, Mat templ, bool show_image );
 
-ConeMeasurment extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES, uint32_t WIDTH, uint32_t HEIGHT);
+ConeMeasurment extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES, uint32_t HEIGHT);
 
 int32_t main(int32_t , char **)
 {
@@ -101,6 +101,12 @@ int32_t main(int32_t , char **)
 			Rect myROI(0, img.rows*9.4/16, img.cols, img.rows*4.2/16);
 			Mat croppedImage = img(myROI);
 
+			Mat red_prep;
+			bitwise_not(croppedImage,red_prep);
+
+			Mat hsv_inv;
+			cvtColor(red_prep, hsv_inv,cv::COLOR_BGR2HSV);
+
 
 			Mat  hsv;
 			cvtColor(croppedImage , hsv , cv::COLOR_BGR2HSV );
@@ -113,17 +119,23 @@ int32_t main(int32_t , char **)
 			Mat blue_mask;
 			inRange(hsv , bluLow , bluHi , blue_mask);
 
-
 			//Yellow filter
-			Scalar  yellowLow(15,60,60);
+			Scalar  yellowLow(10,60,60);
 			Scalar  yellowHi(41,255,255);
 			Mat yellow_mask;
 			inRange(hsv,yellowLow,yellowHi, yellow_mask);
 
 
-			//Cone filter
-			Mat cones_mask;
-			bitwise_or(blue_mask,yellow_mask,cones_mask);
+
+			//Red filter
+			Scalar  redLow(75, 100, 100);
+			Scalar  redHi(95,255,255);
+			Mat red_mask;
+			inRange(hsv_inv , redLow , redHi , red_mask);
+			
+
+
+			
 
 
 			// Remove "holes" in yellow cones
@@ -134,6 +146,14 @@ int32_t main(int32_t , char **)
 			cv::erode(yellow_dilate , yellow_erode , Mat(), Point(-1,  -1), iterations, 1, 1);
 			yellow_mask = yellow_erode;
 			
+			
+			// Remove "holes" in red cones
+			Mat  red_dilate;
+			cv::dilate(red_mask , red_dilate , Mat(), Point(-1,  -1), iterations , 1, 1);
+			Mat  red_erode;
+			cv::erode(red_dilate , red_erode , Mat(), Point(-1,  -1), iterations, 1, 1);
+			red_mask = red_erode;
+			
 
 			// Remove "holes" in blue cones
 			Mat  blue_dilate;
@@ -141,6 +161,14 @@ int32_t main(int32_t , char **)
 			Mat  blue_erode;
 			cv::erode(blue_dilate , blue_erode , Mat(), Point(-1,  -1), iterations, 1, 1);
 			blue_mask = blue_erode;
+
+
+			//Cone filter
+			Mat cones_mask;
+			bitwise_or(blue_mask,yellow_mask,cones_mask);
+
+			bitwise_or(cones_mask,red_mask,cones_mask);
+
 
 
 			// Vector to store cone positions
@@ -159,11 +187,31 @@ int32_t main(int32_t , char **)
 				{
 					if (yellow_bounding_rect.width * yellow_bounding_rect.height > 250 && yellow_bounding_rect.width * yellow_bounding_rect.height < 6000 )
 					{
-						cone_data.push_back(extractConeData(yellow_bounding_rect, 1,CAMERA_POS,TO_DEGREES,WIDTH, HEIGHT));
+						cone_data.push_back(extractConeData(yellow_bounding_rect, 1,CAMERA_POS,TO_DEGREES, HEIGHT));
 						rectangle( croppedImage, yellow_bounding_rect.tl(), yellow_bounding_rect.br(), Scalar( 255,255,255 ), 2 );
 					}
 				}
 			}
+
+			
+			// Find red Contours
+			std::vector<std::vector<Point>> red_contours;
+			std::vector<Vec4i> red_hierarchy;
+			findContours( red_mask, red_contours, red_hierarchy, cv::RETR_EXTERNAL , cv::CHAIN_APPROX_SIMPLE, Point(0, 0) );
+			
+			for( int i = 0; i < (int) red_contours.size(); i++ )
+			{
+				Rect red_bounding_rect = boundingRect( red_contours.at(i));
+				if (red_bounding_rect.width * 1.1 <=  red_bounding_rect.height)
+				{
+					if (red_bounding_rect.width * red_bounding_rect.height > 250 && red_bounding_rect.width * red_bounding_rect.height < 6000 )
+					{
+						cone_data.push_back(extractConeData(red_bounding_rect, 1,CAMERA_POS,TO_DEGREES, HEIGHT));
+						rectangle( croppedImage, red_bounding_rect.tl(), red_bounding_rect.br(), Scalar( 255,255,255 ), 3 );
+					}
+				}
+			}
+
 
 
 			// Find Blue Contours
@@ -178,7 +226,7 @@ int32_t main(int32_t , char **)
 				{
 					if (blue_bounding_rect.width * blue_bounding_rect.height > 250 && blue_bounding_rect.width * blue_bounding_rect.height < 6000 )
 					{
-						cone_data.push_back(extractConeData(blue_bounding_rect, 2,CAMERA_POS,TO_DEGREES,WIDTH,HEIGHT));
+						cone_data.push_back(extractConeData(blue_bounding_rect, 2,CAMERA_POS,TO_DEGREES,HEIGHT));
 						rectangle( croppedImage, blue_bounding_rect.tl(), blue_bounding_rect.br(), Scalar( 255,255,255 ), 2 );
 					}
 				}
@@ -199,7 +247,7 @@ int32_t main(int32_t , char **)
 					}
 				}
 				imshow(sharedMemory->name().c_str(), img);
-				imshow("cropped", croppedImage);
+				//imshow("cropped", red_erode);
 				imshow("mask", cones_mask);
 				waitKey(1);
 			}
@@ -210,7 +258,7 @@ int32_t main(int32_t , char **)
 	return retCode;
 }
 
-ConeMeasurment extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES, uint32_t WIDTH,  uint32_t HEIGHT)
+ConeMeasurment extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES,  uint32_t HEIGHT)
 {
 	Point center = Point(bbox.x + bbox.width/2, HEIGHT - (bbox.y + bbox.height/2) ); 
 	float angle = 90 - atan2(center.y, center.x - CAMERA_POS.x) * TO_DEGREES;
