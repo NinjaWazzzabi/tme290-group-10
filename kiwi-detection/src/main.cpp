@@ -11,19 +11,29 @@
 #include <memory>
 #include <mutex>
 
+#include "kiwi_location.hpp"
+#include "serializer.hpp"
+
 using namespace cv;
 using namespace dnn;
 using namespace std;
+
 
 // Initialize the parameters
 float confThreshold = 0.3; // Confidence threshold
 float nmsThreshold = 0.2;  // Non-maximum suppression threshold
 int inpWidth = 608;  // Width of network's input image
 int inpHeight = 608; // Height of network's input image
+
+const uint32_t WIDTH = 1280; // Width of image
+const uint32_t HEIGHT = 720; // Height of image
+const double CAMERA_FOV = 53.0; // Field of view of Kiwi Camera
+const double KIWI_WIDTH = 0.16; // Width of Kiwi in meters
+
 std::vector<std::string> classes{"kiwi"};
 
 // Remove the bounding boxes with low confidence using non-maxima suppression
-void postprocess(Mat& frame, const std::vector<Mat>& out);
+void postprocess(Mat& frame, const vector<Mat>& outs, cluon::OD4Session &session);
 
 // Draw the predicted bounding box
 void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame);
@@ -31,15 +41,12 @@ void drawPred(int classId, float conf, int left, int top, int right, int bottom,
 // Get the names of the output layers
 vector<String> getOutputsNames(const Net& net);
 
-
 int32_t main(int32_t, char **)
 {
 int32_t retCode{1};
 
 	//const double TO_DEGREES{180 / 3.141592653589793};
 	const std::string NAME{"img.argb"};
-	const uint32_t WIDTH{1280};
-	const uint32_t HEIGHT{720};
 	//const bool VERBOSE{true};
 	const uint16_t CID{111};
 
@@ -133,7 +140,7 @@ int32_t retCode{1};
 			net.forward(outs, getOutputsNames(net));
 			
 			// Remove the bounding boxes with low confidence
-			postprocess(frame, outs);
+			postprocess(frame, outs, od4);
 			
 			// Put efficiency information. The function getPerfProfile returns the overall time for inference(t) and the timings for each of the layers(in layersTimes)
 			vector<double> layersTimes;
@@ -161,8 +168,9 @@ int32_t retCode{1};
 	retCode = 0;
 	return retCode;
 }
+
 // Remove the bounding boxes with low confidence using non-maxima suppression
-void postprocess(Mat& frame, const vector<Mat>& outs)
+void postprocess(Mat& frame, const vector<Mat>& outs, cluon::OD4Session &session)
 {
     vector<int> classIds;
     vector<float> confidences;
@@ -190,7 +198,6 @@ void postprocess(Mat& frame, const vector<Mat>& outs)
                 int left = centerX - width / 2;
                 int top = centerY - height / 2;
                 
-                classIds.push_back(classIdPoint.x);
                 confidences.push_back((float)confidence);
                 boxes.push_back(Rect(left, top, width, height));
             }
@@ -199,15 +206,25 @@ void postprocess(Mat& frame, const vector<Mat>& outs)
     
     // Perform non maximum suppression to eliminate redundant overlapping boxes with
     // lower confidences
+	vector<KiwiLocation> kiwi_locations;
     vector<int> indices;
     NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, indices);
     for (size_t i = 0; i < indices.size(); ++i)
     {
         int idx = indices[i];
         Rect box = boxes[idx];
+
+		KiwiLocation kiwi_location = KiwiLocation(WIDTH, CAMERA_FOV, box.width, box.x);
+		kiwi_locations.push_back(kiwi_location);
         drawPred(classIds[idx], confidences[idx], box.x, box.y,
                  box.x + box.width, box.y + box.height, frame);
     }
+
+	// Send kiwi locations over network session
+	string serialized_kiwi_locations = Serializer::encode(kiwi_locations);
+	opendlv::robo::KiwiLocation kiwi_location_message;
+	kiwi_location_message.data(serialized_kiwi_locations);
+	session.send(kiwi_location_message);
 }
 
 // Draw the predicted bounding box

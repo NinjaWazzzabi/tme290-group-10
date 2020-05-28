@@ -11,11 +11,9 @@ message opendlv.robo.TrafficLocation [id = 9002] {
 }
 
 message opendlv.robo.ConeLocation [id = 9003] {
-  //float relative_bearing [id = 1];
-  //float distance [id = 2];
-  //float camera_x_perc [id = 3];     // [-1,1]
-  //float camera_y_perc [id = 4];     // [-1,1]
   string data [id = 1];
 }
 
-
+message opendlv.robo.KiwiLocation [id = 9004] {
+  string data [id = 1];
+}
