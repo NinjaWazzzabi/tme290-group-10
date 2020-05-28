@@ -1,4 +1,4 @@
-FROM ubuntu:16.04 as builder
+FROM eigen-opencv-builder as builder
 
 # Install c++ related packages
 RUN apt-get update && \
@@ -23,7 +23,7 @@ RUN mkdir /tmp/build && \
 	make && cp aimpoint-driver /tmp
 
 # Deploy
-FROM ubuntu:16.04
+FROM eigen-opencv-builder
 RUN apt-get update
 RUN mkdir /opt -p
 WORKDIR /opt

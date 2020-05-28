@@ -1,2 +1,2 @@
 # Build docker with eigen and opencv
-docker build -f eigen-opencv.dockerfile -t eigen-opencv-builder .
+docker build -f eigen-opencv-fast.dockerfile -t eigen-opencv-builder .
