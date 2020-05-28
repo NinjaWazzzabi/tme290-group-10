@@ -32,7 +32,7 @@ const double KIWI_WIDTH = 0.16; // Width of Kiwi in meters
 
 std::vector<std::string> classes{"kiwi"};
 
-// Remove the bounding boxes with low confidence using non-maxima suppression
+// Remove low confidence bboxes
 void postprocess(Mat& frame, const vector<Mat>& outs, cluon::OD4Session &session);
 
 // Draw the predicted bounding box
@@ -138,15 +138,18 @@ int32_t retCode{1};
 			// Runs the forward pass to get output of the output layers
 			vector<Mat> outs;
 			net.forward(outs, getOutputsNames(net));
+
 			
 			// Remove the bounding boxes with low confidence
 			postprocess(frame, outs, od4);
+
 			
 			// Put efficiency information. The function getPerfProfile returns the overall time for inference(t) and the timings for each of the layers(in layersTimes)
 			vector<double> layersTimes;
 			double freq = getTickFrequency() / 1000;
 			double t = net.getPerfProfile(layersTimes) / freq;
 			string label = format("Inference time for a frame : %.2f ms", t);
+			//std::cout << label << std::endl;
 			putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 255));
 			
 			// Write the frame with the detection boxes
@@ -154,14 +157,8 @@ int32_t retCode{1};
 			frame.convertTo(detectedFrame, CV_8U);
 
 
-			//for( size_t i = 0; i < kiwis.size(); i++ )
-			//{
-			//	cv::rectangle(img, Point(kiwis[i].x,kiwis[i].y), Point(kiwis[i].x + kiwis[i].width, kiwis[i].y + kiwis[i].height), Scalar(255,0,0));
-			//}
-
-
-			//imshow("kiwis", frame);
-			//waitKey(1);
+			imshow("kiwis", frame);
+			waitKey(1);
 
 		}
 	}
@@ -198,11 +195,13 @@ void postprocess(Mat& frame, const vector<Mat>& outs, cluon::OD4Session &session
                 int left = centerX - width / 2;
                 int top = centerY - height / 2;
                 
+				classIds.push_back(classIdPoint.x);
                 confidences.push_back((float)confidence);
                 boxes.push_back(Rect(left, top, width, height));
             }
         }
     }
+
     
     // Perform non maximum suppression to eliminate redundant overlapping boxes with
     // lower confidences
@@ -213,10 +212,12 @@ void postprocess(Mat& frame, const vector<Mat>& outs, cluon::OD4Session &session
     {
         int idx = indices[i];
         Rect box = boxes[idx];
-
 		KiwiLocation kiwi_location = KiwiLocation(WIDTH, CAMERA_FOV, box.width, box.x);
 		kiwi_locations.push_back(kiwi_location);
-        drawPred(classIds[idx], confidences[idx], box.x, box.y,
+
+		int classId = classIds[idx];
+		float conf = confidences[idx];
+        drawPred(classId, conf , box.x, box.y,
                  box.x + box.width, box.y + box.height, frame);
     }
 
@@ -240,6 +241,7 @@ void drawPred(int classId, float conf, int left, int top, int right, int bottom,
         CV_Assert(classId < (int)classes.size());
         label = classes[classId] + ":" + label;
     }
+	
     
     //Display the label at the top of the bounding box
     int baseLine;
