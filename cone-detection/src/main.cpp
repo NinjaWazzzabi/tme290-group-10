@@ -248,10 +248,6 @@ int32_t main(int32_t , char **)
 						std::cout << "Bearing:  " << c.relative_bearing() << "  DISTANCE:  " << c.distance() <<  "  Type:  " << c.type() <<  std::endl;
 					}
 				}
-				imshow(sharedMemory->name().c_str(), img);
-				//imshow("cropped", red_erode);
-				imshow("mask", cones_mask);
-				waitKey(1);
 			}
 
 		}

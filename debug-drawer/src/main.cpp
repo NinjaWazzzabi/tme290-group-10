@@ -1,6 +1,7 @@
 #include "cluon-complete.hpp"
 #include "messages.hpp"
-#include "cone_coder.hpp"
+#include "cone_location.hpp"
+#include "serializer.hpp"
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -23,7 +24,7 @@ int32_t main(int32_t , char **)
 	const bool VERBOSE{true};
 	const uint16_t CID{111};
 	std::mutex m_external_data;
-	std::vector<ConeMeasurment> global_cones;
+	std::vector<ConeLocation> global_cones;
 	std::deque<Mat> imgs;
 
 
@@ -39,7 +40,7 @@ int32_t main(int32_t , char **)
 
 		auto cone_list_listener{[&global_cones, &m_external_data](cluon::data::Envelope &&envelope) {
 			auto cones_message = cluon::extractMessage<opendlv::robo::ConeLocation>(std::move(envelope));
-			std::vector<ConeMeasurment> cones = ConeCoder::decode(cones_message.data());
+			std::vector<ConeLocation> cones = Serializer::decode<ConeLocation>(cones_message.data());
 			{
 				std::lock_guard<std::mutex> lock(m_external_data);
 				global_cones.clear();
@@ -120,7 +121,7 @@ int32_t main(int32_t , char **)
 
 				for (uint32_t i = 0; i < global_cones.size(); i++)
 				{
-					ConeMeasurment cone = global_cones[i];
+					ConeLocation cone = global_cones[i];
 					rectangle( frame, Point(cone.x(),cone.y()), Point(cone.x() + cone.w(),cone.y() + cone.h()), Scalar( 255,255,255 ), 2 );
 				}
 				
