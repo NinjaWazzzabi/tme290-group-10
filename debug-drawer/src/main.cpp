@@ -21,7 +21,6 @@ int32_t main(int32_t , char **)
 	const std::string NAME{"img.argb"};
 	const uint32_t WIDTH{1280};
 	const uint32_t HEIGHT{720};
-	const bool VERBOSE{true};
 	const uint16_t CID{111};
 	std::mutex m_external_data;
 	std::vector<ConeLocation> global_cones;
