@@ -30,3 +30,13 @@ services:
         network_mode: "host"
         environment:
             - DISPLAY=${DISPLAY}
+    debug-drawer:
+        image: debug-drawer
+        restart: on-failure
+        network_mode: "host"
+        ipc: "host"
+        volumes:
+            - /tmp:/tmp
+        network_mode: "host"
+        environment:
+            - DISPLAY=${DISPLAY}
