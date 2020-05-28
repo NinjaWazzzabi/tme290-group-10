@@ -16,13 +16,6 @@
 FROM eigen-opencv-builder as builder
 ENV DEBIAN_FRONTEND=noninteractive 
 
-RUN apt-get update
-RUN apt-get install -y \
-    build-essential \
-    cmake \
-    software-properties-common \
-    libopencv-dev
-
 RUN add-apt-repository -y ppa:chrberger/libcluon
 RUN apt-get update
 RUN apt-get install -y libcluon

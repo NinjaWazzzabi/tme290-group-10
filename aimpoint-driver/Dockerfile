@@ -1,13 +1,5 @@
 FROM eigen-opencv-builder as builder
 
-# Install c++ related packages
-RUN apt-get update && \
-	apt-get install -y \
-		ca-certificates \
-		build-essential \
-		cmake \
-		software-properties-common
-
 # Install libcluon
 RUN add-apt-repository -y ppa:chrberger/libcluon  && \
 	apt-get update && \
