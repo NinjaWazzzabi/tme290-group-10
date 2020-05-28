@@ -160,8 +160,8 @@ int32_t retCode{1};
 			//}
 
 
-			imshow("kiwis", frame);
-			waitKey(1);
+			//imshow("kiwis", frame);
+			//waitKey(1);
 
 		}
 	}

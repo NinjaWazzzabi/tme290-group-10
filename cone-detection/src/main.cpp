@@ -16,7 +16,7 @@ using namespace cv;
 
 void MatchingMethod( int, void* , Mat img, Mat templ, bool show_image );
 
-ConeLocation extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES, uint32_t HEIGHT);
+ConeLocation extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES, double cropped_top, double cropped_bottom,uint32_t HEIGHT);
 
 int32_t main(int32_t , char **)
 {
@@ -189,7 +189,7 @@ int32_t main(int32_t , char **)
 				{
 					if (yellow_bounding_rect.width * yellow_bounding_rect.height > 250 && yellow_bounding_rect.width * yellow_bounding_rect.height < 6000 )
 					{
-						cone_data.push_back(extractConeData(yellow_bounding_rect, 1,CAMERA_POS,TO_DEGREES, HEIGHT));
+						cone_data.push_back(extractConeData(yellow_bounding_rect, 1,CAMERA_POS,TO_DEGREES,img.rows*9.4/16, img.rows*4.2/16, HEIGHT));
 						rectangle( croppedImage, yellow_bounding_rect.tl(), yellow_bounding_rect.br(), Scalar( 255,255,255 ), 2 );
 					}
 				}
@@ -208,7 +208,7 @@ int32_t main(int32_t , char **)
 				{
 					if (red_bounding_rect.width * red_bounding_rect.height > 250 && red_bounding_rect.width * red_bounding_rect.height < 6000 )
 					{
-						cone_data.push_back(extractConeData(red_bounding_rect, 1,CAMERA_POS,TO_DEGREES, HEIGHT));
+						cone_data.push_back(extractConeData(red_bounding_rect, 3,CAMERA_POS,TO_DEGREES,img.rows*9.4/16, img.rows*4.2/16, HEIGHT));
 						rectangle( croppedImage, red_bounding_rect.tl(), red_bounding_rect.br(), Scalar( 255,255,255 ), 3 );
 					}
 				}
@@ -228,7 +228,7 @@ int32_t main(int32_t , char **)
 				{
 					if (blue_bounding_rect.width * blue_bounding_rect.height > 250 && blue_bounding_rect.width * blue_bounding_rect.height < 6000 )
 					{
-						cone_data.push_back(extractConeData(blue_bounding_rect, 2,CAMERA_POS,TO_DEGREES,HEIGHT));
+						cone_data.push_back(extractConeData(blue_bounding_rect, 2,CAMERA_POS,TO_DEGREES,img.rows*9.4/16, img.rows*4.2/16, HEIGHT));
 						rectangle( croppedImage, blue_bounding_rect.tl(), blue_bounding_rect.br(), Scalar( 255,255,255 ), 2 );
 					}
 				}
@@ -260,11 +260,13 @@ int32_t main(int32_t , char **)
 	return retCode;
 }
 
-ConeLocation extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES,  uint32_t HEIGHT)
+ConeLocation extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES, double cropped_top, double cropped_bottom,uint32_t HEIGHT)
 {
-	Point center = Point(bbox.x + bbox.width/2, HEIGHT - (bbox.y + bbox.height/2) ); 
+	double x = bbox.x;
+	double y = bbox.y + cropped_top;
+	Point center = Point(x + bbox.width/2, HEIGHT - (y + bbox.height/2) ); 
 	float angle = 90 - atan2(center.y, center.x - CAMERA_POS.x) * TO_DEGREES;
-	return ConeLocation(angle, center.y, type);
+	return ConeLocation(x,y,bbox.width,bbox.height, angle, center.y, type);
 }
 
 
@@ -323,8 +325,6 @@ void MatchingMethod( int, void*, Mat img, Mat templPre, bool show_image)
 		rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255,255,255), 2, 8, 0 );
 		rectangle( result, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255,255,255), 2, 8, 0 );
 		
-		imshow("Image", img_display);
-		waitKey(1);
 	}
   return;
 }
