@@ -5,6 +5,7 @@
 #include <iostream>
 #include <mutex>
 #include "cone_location.hpp"
+#include "kiwi_location.hpp"
 #include "serializer.hpp"
 #include "line.hpp"
 #include "aimpoint-finder.hpp"
@@ -34,6 +35,7 @@ int32_t main(int32_t, char **)
 	std::mutex m_external_data;
 	uint32_t global_drive_state = STOP;
 	std::vector<ConeLocation> global_cones;
+	std::vector<KiwiLocation> global_kiwis;
 	AimpointFinder aimpoint_finder;
 	Vector2d previous_aimpoint = {0.0, 0.0};
 
@@ -54,6 +56,16 @@ int32_t main(int32_t, char **)
 			std::lock_guard<std::mutex> lock(m_external_data);
 			global_cones.clear();
 			global_cones = cones;
+		}
+	}};
+
+	auto kiwi_list_listener{[&global_kiwis, &m_external_data](cluon::data::Envelope &&envelope) {
+		auto kiwis_message = cluon::extractMessage<opendlv::robo::KiwiLocation>(std::move(envelope));
+		std::vector<KiwiLocation> kiwis = Serializer::decode<KiwiLocation>(kiwis_message.data());
+		{
+			std::lock_guard<std::mutex> lock(m_external_data);
+			global_kiwis.clear();
+			global_kiwis = kiwis;
 		}
 	}};
 

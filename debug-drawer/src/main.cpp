@@ -1,6 +1,7 @@
 #include "cluon-complete.hpp"
 #include "messages.hpp"
 #include "cone_location.hpp"
+#include "kiwi_location.hpp"
 #include "serializer.hpp"
 
 #include <opencv2/highgui/highgui.hpp>
@@ -18,12 +19,13 @@ int32_t main(int32_t , char **)
 {
 	int32_t retCode{1};
 
-	const std::string NAME{"video0.argb"};
+	const std::string NAME{"img.argb"};
 	const uint32_t WIDTH{1280};
 	const uint32_t HEIGHT{720};
 	const uint16_t CID{111};
 	std::mutex m_external_data;
 	std::vector<ConeLocation> global_cones;
+	std::vector<KiwiLocation> global_kiwis;
 	double aimpoint_x = 0.0;
 	double aimpoint_y = 0.0;
 	std::deque<Mat> imgs;
@@ -46,6 +48,16 @@ int32_t main(int32_t , char **)
 				std::lock_guard<std::mutex> lock(m_external_data);
 				global_cones.clear();
 				global_cones = cones;
+			}
+		}};
+
+		auto kiwi_list_listener{[&global_kiwis, &m_external_data](cluon::data::Envelope &&envelope) {
+			auto kiwis_message = cluon::extractMessage<opendlv::robo::KiwiLocation>(std::move(envelope));
+			std::vector<KiwiLocation> kiwis = Serializer::decode<KiwiLocation>(kiwis_message.data());
+			{
+				std::lock_guard<std::mutex> lock(m_external_data);
+				global_kiwis.clear();
+				global_kiwis = kiwis;
 			}
 		}};
 
@@ -94,6 +106,7 @@ int32_t main(int32_t , char **)
 		od4.dataTrigger(opendlv::proxy::DistanceReading::ID(), onDistance);
 		od4.dataTrigger(opendlv::robo::Aimpoint::ID(), aimpoint_listener);
 		od4.dataTrigger(opendlv::robo::ConeLocation::ID(), cone_list_listener);
+		od4.dataTrigger(opendlv::robo::KiwiLocation::ID(), kiwi_list_listener);
 
 
 
@@ -135,6 +148,12 @@ int32_t main(int32_t , char **)
 				{
 					ConeLocation cone = global_cones[i];
 					rectangle( frame, Point(cone.x(),cone.y()), Point(cone.x() + cone.w(),cone.y() + cone.h()), Scalar( 255,255,255 ), 2 );
+				}
+
+				for (uint32_t i = 0; i < global_kiwis.size(); i++)
+				{
+					KiwiLocation kiwi = global_kiwis[i];
+					rectangle( frame, Point(kiwi.x(),kiwi.y()), Point(kiwi.x() + kiwi.w(),kiwi.y() + kiwi.h()), Scalar( 255,0,0 ), 2 );
 				}
 				
 				circle(frame, Point(aimpoint_x, aimpoint_y), 20, Scalar(0, 125, 255), 5);

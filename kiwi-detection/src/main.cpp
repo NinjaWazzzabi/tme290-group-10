@@ -46,7 +46,7 @@ int32_t main(int32_t, char **)
 int32_t retCode{1};
 
 	//const double TO_DEGREES{180 / 3.141592653589793};
-	const std::string NAME{"video0.argb"};
+	const std::string NAME{"img.argb"};
 	//const bool VERBOSE{true};
 	const uint16_t CID{111};
 
@@ -212,7 +212,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs, cluon::OD4Session &session
     {
         int idx = indices[i];
         Rect box = boxes[idx];
-		KiwiLocation kiwi_location = KiwiLocation(WIDTH, CAMERA_FOV, box.width, box.x);
+		KiwiLocation kiwi_location = KiwiLocation( box.x, box.y, box.width,box.height, WIDTH, CAMERA_FOV, box.width, box.x + box.width/2.0f);
 		kiwi_locations.push_back(kiwi_location);
 
 		int classId = classIds[idx];
