@@ -17,6 +17,9 @@
 
 using namespace std;
 
+static constexpr double LOWPASS_WEIGHT = 0.1;
+
+
 /**
  * TODO: Will not handle intersection well, as cones on both sides are the same colour
  * Need to create a special handler for that. Perhaps, as the road is straight
@@ -32,6 +35,7 @@ int32_t main(int32_t, char **)
 	uint32_t global_drive_state = STOP;
 	std::vector<ConeLocation> global_cones;
 	AimpointFinder aimpoint_finder;
+	Vector2d previous_aimpoint = {0.0, 0.0};
 
 	// TODO: listen to kiwi location messages
 
@@ -57,7 +61,7 @@ int32_t main(int32_t, char **)
 	session.dataTrigger(opendlv::robo::DriveState::ID(), drive_state_listener);
 	session.dataTrigger(opendlv::robo::ConeLocation::ID(), cone_list_listener);
 
-	auto aimpoint_runner{[&session, &global_cones, &aimpoint_finder, &m_external_data]() -> bool {
+	auto aimpoint_runner{[&session, &global_cones, &aimpoint_finder, &previous_aimpoint, &m_external_data]() -> bool {
 		vector<ConeLocation> cones;
 		{
 			std::lock_guard<std::mutex> lock(m_external_data);
@@ -68,19 +72,24 @@ int32_t main(int32_t, char **)
 		}
 
 		Vector2d aimpoint = aimpoint_finder.find_aimpoint(cones);
+		Vector2d final_aimpoint = {
+			(aimpoint.x() * LOWPASS_WEIGHT) + (1.0 - LOWPASS_WEIGHT) * previous_aimpoint.x(),
+			(aimpoint.y() * LOWPASS_WEIGHT) + (1.0 - LOWPASS_WEIGHT) * previous_aimpoint.y()
+		};
 
-		double aimpoint_angle_offset = aimpoint.x();
-
+		// Uses known image sizes. Should be switched to bearing and distance
+		double aimpoint_angle_offset = (final_aimpoint.x() - 1280.0 / 2.0) * (53.0 / 1280.0);
 		double desired_steering = STEERING_P * aimpoint_angle_offset;
+		
 
 		opendlv::robo::Aimpoint aimpoint_message;
 		opendlv::proxy::PedalPositionRequest throttle_request;
 		opendlv::proxy::GroundSteeringRequest steering_request;
 
-		aimpoint_message.x(aimpoint.x());
-		aimpoint_message.y(aimpoint.y());
+		// TODO: Set throttle
+		aimpoint_message.x(final_aimpoint.x());
+		aimpoint_message.y(final_aimpoint.y());
 		aimpoint_message.steering_angle(desired_steering);
-		// TODO: FIX, don't kill carr plz
 		throttle_request.position(0.25);
 		steering_request.groundSteering(desired_steering);
 
@@ -88,6 +97,7 @@ int32_t main(int32_t, char **)
 		session.send(steering_request);
 		session.send(aimpoint_message);
 
+		previous_aimpoint = final_aimpoint;
 		return true;
 	}};
 	session.timeTrigger(FREQ, aimpoint_runner);

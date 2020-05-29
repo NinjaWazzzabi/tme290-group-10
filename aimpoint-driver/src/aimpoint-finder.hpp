@@ -20,6 +20,7 @@ class AimpointFinder
 
 		avg_height_pos /= double(cones.size());
 
+		// Uses known image sizes. Should be switched to bearing and distance
 		if (cone_type == CONE_LEFT)
 		{
 			// Vehicle staring towards the left side of track -> turn right
@@ -53,16 +54,16 @@ class AimpointFinder
 		avg_right_pos /= double(cones_right.size());
 
 		avg_height_pos /= double(cones_left.size() + cones_right.size());
-
+		// Uses known image sizes. Should be switched to bearing and distance
 		return Vector2d((avg_left_pos + avg_right_pos) / 2.0, avg_height_pos);
 
 		// NEXT IDEA:
 
 		// lines_between_cones{}
 		// For all possible permutations:
-		// Connect lines between between the cones
-		// IF there are NO LINES CROSSING
-		// add "line permutation" to lines_between_cones
+			// Connect lines between between the cones
+			// IF there are NO LINES CROSSING
+				// add "line permutation" to lines_between_cones
 
 		// // The lines should now build a ladder
 
