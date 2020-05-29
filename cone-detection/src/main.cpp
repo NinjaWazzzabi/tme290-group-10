@@ -189,7 +189,7 @@ int32_t main(int32_t , char **)
 				{
 					if (yellow_bounding_rect.width * yellow_bounding_rect.height > 250 && yellow_bounding_rect.width * yellow_bounding_rect.height < 6000 )
 					{
-						cone_data.push_back(extractConeData(yellow_bounding_rect, CONE_RIGHT,CAMERA_POS,TO_DEGREES,img.rows*9.4/16, HEIGHT));
+						cone_data.push_back(extractConeData(yellow_bounding_rect, CONE_LEFT,CAMERA_POS,TO_DEGREES,img.rows*9.4/16, HEIGHT));
 						rectangle( croppedImage, yellow_bounding_rect.tl(), yellow_bounding_rect.br(), Scalar( 255,255,255 ), 2 );
 					}
 				}
@@ -228,7 +228,7 @@ int32_t main(int32_t , char **)
 				{
 					if (blue_bounding_rect.width * blue_bounding_rect.height > 250 && blue_bounding_rect.width * blue_bounding_rect.height < 6000 )
 					{
-						cone_data.push_back(extractConeData(blue_bounding_rect, CONE_LEFT,CAMERA_POS,TO_DEGREES,img.rows*9.4/16, HEIGHT));
+						cone_data.push_back(extractConeData(blue_bounding_rect, CONE_RIGHT,CAMERA_POS,TO_DEGREES,img.rows*9.4/16, HEIGHT));
 						rectangle( croppedImage, blue_bounding_rect.tl(), blue_bounding_rect.br(), Scalar( 255,255,255 ), 2 );
 					}
 				}
