@@ -33,8 +33,28 @@ release:
             --output "/tmp/docker-buildx" && chmod 755 /tmp/docker-buildx
         - /tmp/docker-buildx create --name multiplatformbuilder
         - /tmp/docker-buildx use multiplatformbuilder
-        - /tmp/docker-buildx build --platform "$PLATFORMS" -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" . &&
-          /tmp/docker-buildx build --platform "$PLATFORMS" -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" --push .
+
+        # Splitting up a small project like this into different repositories
+        # will create more overhead for developers. We have our reasons to
+        # keep all source in the same repository.
+        # - /tmp/docker-buildx build --platform "$PLATFORMS" -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" . &&
+        #   /tmp/docker-buildx build --platform "$PLATFORMS" -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" --push .
+
+        # ACTION PLANNER
+        - /tmp/docker-buildx build --platform "$PLATFORMS" -f action-planner/Dockerfile -t "$CI_REGISTRY_IMAGE":"action-planner" action-planner/ &&
+          /tmp/docker-buildx build --platform "$PLATFORMS" -f action-planner/Dockerfile -t "$CI_REGISTRY_IMAGE":"action-planner" --push action-planner/
+
+        # AIMPOINT DRIVER
+        - /tmp/docker-buildx build --platform "$PLATFORMS" -f aimpoint-driver/Dockerfile -t "$CI_REGISTRY_IMAGE":"aimpoint-driver" aimpoint-driver/ &&
+          /tmp/docker-buildx build --platform "$PLATFORMS" -f aimpoint-driver/Dockerfile -t "$CI_REGISTRY_IMAGE":"aimpoint-driver" --push aimpoint-driver/
+
+        # CONE DETECTION
+        - /tmp/docker-buildx build --platform "$PLATFORMS" -f cone-detection/Dockerfile -t "$CI_REGISTRY_IMAGE":"cone-detection" cone-detection/ &&
+          /tmp/docker-buildx build --platform "$PLATFORMS" -f cone-detection/Dockerfile -t "$CI_REGISTRY_IMAGE":"cone-detection" --push cone-detection/
+
+        # KIWI DETECTION
+        - /tmp/docker-buildx build --platform "$PLATFORMS" -f kiwi-detection/Dockerfile -t "$CI_REGISTRY_IMAGE":"kiwi-detection" kiwi-detection/ &&
+          /tmp/docker-buildx build --platform "$PLATFORMS" -f kiwi-detection/Dockerfile -t "$CI_REGISTRY_IMAGE":"kiwi-detection" --push kiwi-detection/
     only:
         - tags
         - /^v[0-9.]+$/
