@@ -46,7 +46,7 @@ int32_t main(int32_t, char **)
 int32_t retCode{1};
 
 	//const double TO_DEGREES{180 / 3.141592653589793};
-	const std::string NAME{"img.argb"};
+	const std::string NAME{"video0.argb"};
 	//const bool VERBOSE{true};
 	const uint16_t CID{111};
 
@@ -157,8 +157,8 @@ int32_t retCode{1};
 			frame.convertTo(detectedFrame, CV_8U);
 
 
-			imshow("kiwis", frame);
-			waitKey(1);
+			//imshow("kiwis", frame);
+			//waitKey(1);
 
 		}
 	}

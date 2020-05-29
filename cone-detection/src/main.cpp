@@ -23,7 +23,7 @@ int32_t main(int32_t , char **)
 	int32_t retCode{1};
 
 	const double TO_DEGREES{180 / 3.141592653589793};
-	const std::string NAME{"img.argb"};
+	const std::string NAME{"video0.argb"};
 	const uint32_t WIDTH{1280};
 	const uint32_t HEIGHT{720};
 	const bool VERBOSE{false};

@@ -17,7 +17,7 @@
 
 using namespace std;
 
-static constexpr double LOWPASS_WEIGHT = 0.1;
+static constexpr double LOWPASS_WEIGHT = 0.06;
 
 
 /**
@@ -29,7 +29,7 @@ static constexpr double LOWPASS_WEIGHT = 0.1;
 
 int32_t main(int32_t, char **)
 {
-	static constexpr double STEERING_P = 1.0;
+	static constexpr double STEERING_P = 0.25;
 
 	std::mutex m_external_data;
 	uint32_t global_drive_state = STOP;
@@ -90,8 +90,8 @@ int32_t main(int32_t, char **)
 		aimpoint_message.x(final_aimpoint.x());
 		aimpoint_message.y(final_aimpoint.y());
 		aimpoint_message.steering_angle(desired_steering);
-		throttle_request.position(0.25);
-		steering_request.groundSteering(desired_steering);
+		throttle_request.position(0.15);
+		steering_request.groundSteering(-desired_steering);
 
 		session.send(throttle_request);
 		session.send(steering_request);
