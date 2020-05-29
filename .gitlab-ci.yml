@@ -17,8 +17,8 @@ build-amd64:
     tags:
         - docker-build
     stage: build
-    script:
-        - docker build .
+	script:
+		- cd custom-dockers && ./build.sh && cd .. && ./build_rover.sh
     only:
         - master
 release: 
