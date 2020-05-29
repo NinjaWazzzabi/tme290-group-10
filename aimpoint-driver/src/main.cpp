@@ -17,7 +17,7 @@
 
 using namespace std;
 
-static constexpr double LOWPASS_WEIGHT = 0.06;
+static constexpr double LOWPASS_WEIGHT = 0.05;
 
 
 /**
@@ -29,7 +29,7 @@ static constexpr double LOWPASS_WEIGHT = 0.06;
 
 int32_t main(int32_t, char **)
 {
-	static constexpr double STEERING_P = 0.25;
+	static constexpr double STEERING_P = 0.01;
 
 	std::mutex m_external_data;
 	uint32_t global_drive_state = STOP;
@@ -71,7 +71,7 @@ int32_t main(int32_t, char **)
 			}
 		}
 
-		Vector2d aimpoint = aimpoint_finder.find_aimpoint(cones);
+		Vector2d aimpoint = aimpoint_finder.find_aimpoint(cones, previous_aimpoint);
 		Vector2d final_aimpoint = {
 			(aimpoint.x() * LOWPASS_WEIGHT) + (1.0 - LOWPASS_WEIGHT) * previous_aimpoint.x(),
 			(aimpoint.y() * LOWPASS_WEIGHT) + (1.0 - LOWPASS_WEIGHT) * previous_aimpoint.y()
@@ -89,8 +89,9 @@ int32_t main(int32_t, char **)
 		// TODO: Set throttle
 		aimpoint_message.x(final_aimpoint.x());
 		aimpoint_message.y(final_aimpoint.y());
+		//std::cout << -desired_steering << std::endl;
 		aimpoint_message.steering_angle(desired_steering);
-		throttle_request.position(0.15);
+		throttle_request.position(0.25);
 		steering_request.groundSteering(-desired_steering);
 
 		session.send(throttle_request);

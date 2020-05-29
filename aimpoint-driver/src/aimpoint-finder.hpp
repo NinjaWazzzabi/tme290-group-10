@@ -71,11 +71,12 @@ class AimpointFinder
 	}
 
 public:
-	Vector2d find_aimpoint(std::vector<ConeLocation> &cones)
+	Vector2d find_aimpoint(std::vector<ConeLocation> &cones, Vector2d prev_aimpoint)
 	{
 		// Group cones into cones_left and cones_right
 		std::vector<ConeLocation> cones_left;
 		std::vector<ConeLocation> cones_right;
+		std::vector<ConeLocation> cones_intersection;
 		for (ConeLocation cone_location : cones)
 		{
 			if (cone_location.type() == CONE_LEFT)
@@ -85,14 +86,22 @@ public:
 			else if (cone_location.type() == CONE_RIGHT)
 			{
 				cones_right.push_back(cone_location);
+			}else if  (cone_location.type() == CONE_INTERSECTION)
+			{
+				cones_intersection.push_back(cone_location);
 			}
 		}
 
 		Vector2d aimpoint;
-		if (cones_left.size() < 1 && cones_right.size() < 1)
+		if (cones_intersection.size()> cones_left.size() + cones_right.size())
+		{
+			// In intersection, slowly move aimpoint towards middle of screen
+			aimpoint = {(1280.0f/2) * 0.1 + 0.9 * prev_aimpoint.x(),(720.0f/2) *0.1 + 0.9 * prev_aimpoint.y()};
+		}
+		else if (cones_left.size() < 1 && cones_right.size() < 1)
 		{
 			// No cones found
-			aimpoint = {0, 0};
+			aimpoint = prev_aimpoint;
 		}
 		else if (cones_left.size() < 1)
 		{
