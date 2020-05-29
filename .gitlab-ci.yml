@@ -1,0 +1,41 @@
+image: docker:19.03.3
+variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_CLI_EXPERIMENTAL: enabled
+    PLATFORMS: "linux/amd64,linux/arm64,linux/arm/v6"
+services:
+    - name: docker:19.03.3-dind
+      command: ["--experimental"]
+stages:
+    - build
+    - deploy
+before_script:
+    - docker info
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+build-amd64:
+    tags:
+        - docker-build
+    stage: build
+    script:
+        - docker build .
+    only:
+        - master
+release: 
+    tags:
+        - docker-build
+    stage: deploy
+    script:
+        - docker run --privileged linuxkit/binfmt:v0.7
+        - apk update && apk add curl
+        - >
+            curl -L "https://github.com/docker/buildx/releases/download/v0.3.1/buildx-v0.3.1.linux-amd64"
+            --output "/tmp/docker-buildx" && chmod 755 /tmp/docker-buildx
+        - /tmp/docker-buildx create --name multiplatformbuilder
+        - /tmp/docker-buildx use multiplatformbuilder
+        - /tmp/docker-buildx build --platform "$PLATFORMS" -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" . &&
+          /tmp/docker-buildx build --platform "$PLATFORMS" -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" --push .
+    only:
+        - tags
+        - /^v[0-9.]+$/
+    when: on_success
