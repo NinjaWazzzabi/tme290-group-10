@@ -32,8 +32,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /usr/bin
 COPY ./src/kiwi.cfg /usr/bin/kiwi.cfg
-COPY ./src/kiwi_3000.weights /usr/bin/kiwi_3000.weights
-COPY ./src/kiwi_5000.weights /usr/bin/kiwi_5000.weights
+COPY ./src/kiwi_normal.weights /usr/bin/normal.weights
+COPY ./src/kiwi_intersect.weights /usr/bin/kiwi_intersect.weights
 RUN export DISPLAY=172.22.32.1:0.0
 COPY --from=builder /tmp/dest /usr
 ENTRYPOINT ["/usr/bin/kiwi-detection"]

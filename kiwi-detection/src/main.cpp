@@ -51,7 +51,7 @@ int32_t retCode{1};
 	const uint16_t CID{111};
 
 	String modelConfiguration = "kiwi.cfg";
-    String modelWeights = "kiwi_5000.weights";
+    String modelWeights = "kiwi_intersect.weights";
 
     // Load the network
     Net net = readNetFromDarknet(modelConfiguration, modelWeights);

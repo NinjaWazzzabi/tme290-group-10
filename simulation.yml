@@ -4,7 +4,7 @@ services:
   sim-global:
     image: chalmersrevere/opendlv-sim-global-amd64:v0.0.7
     network_mode: "host"
-    command: "/usr/bin/opendlv-sim-global --cid=111 --freq=50 --frame-id=0 --x=0.0 --yaw=0.2 --timemod=0.2"
+    command: "/usr/bin/opendlv-sim-global --cid=111 --freq=50 --frame-id=0 --x=0.0 --yaw=1.4 --timemod=0.2"
 
   sim-motor-kiwi:
     image: chalmersrevere/opendlv-sim-motor-kiwi-amd64:v0.0.7
