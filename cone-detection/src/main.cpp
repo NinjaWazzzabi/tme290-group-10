@@ -26,7 +26,7 @@ int32_t main(int32_t , char **)
 	const std::string NAME{"img.argb"};
 	const uint32_t WIDTH{1280};
 	const uint32_t HEIGHT{720};
-	const bool VERBOSE{true};
+	const bool VERBOSE{false};
 	const uint16_t CID{111};
 	const Point CAMERA_POS = Point(WIDTH/2, HEIGHT);
 
@@ -189,7 +189,7 @@ int32_t main(int32_t , char **)
 				{
 					if (yellow_bounding_rect.width * yellow_bounding_rect.height > 250 && yellow_bounding_rect.width * yellow_bounding_rect.height < 6000 )
 					{
-						cone_data.push_back(extractConeData(yellow_bounding_rect, 1,CAMERA_POS,TO_DEGREES,img.rows*9.4/16, HEIGHT));
+						cone_data.push_back(extractConeData(yellow_bounding_rect, CONE_RIGHT,CAMERA_POS,TO_DEGREES,img.rows*9.4/16, HEIGHT));
 						rectangle( croppedImage, yellow_bounding_rect.tl(), yellow_bounding_rect.br(), Scalar( 255,255,255 ), 2 );
 					}
 				}
@@ -208,7 +208,7 @@ int32_t main(int32_t , char **)
 				{
 					if (red_bounding_rect.width * red_bounding_rect.height > 250 && red_bounding_rect.width * red_bounding_rect.height < 6000 )
 					{
-						cone_data.push_back(extractConeData(red_bounding_rect, 3,CAMERA_POS,TO_DEGREES,img.rows*9.4/16, HEIGHT));
+						cone_data.push_back(extractConeData(red_bounding_rect, CONE_INTERSECTION,CAMERA_POS,TO_DEGREES,img.rows*9.4/16, HEIGHT));
 						rectangle( croppedImage, red_bounding_rect.tl(), red_bounding_rect.br(), Scalar( 255,255,255 ), 3 );
 					}
 				}
@@ -228,7 +228,7 @@ int32_t main(int32_t , char **)
 				{
 					if (blue_bounding_rect.width * blue_bounding_rect.height > 250 && blue_bounding_rect.width * blue_bounding_rect.height < 6000 )
 					{
-						cone_data.push_back(extractConeData(blue_bounding_rect, 2,CAMERA_POS,TO_DEGREES,img.rows*9.4/16, HEIGHT));
+						cone_data.push_back(extractConeData(blue_bounding_rect, CONE_LEFT,CAMERA_POS,TO_DEGREES,img.rows*9.4/16, HEIGHT));
 						rectangle( croppedImage, blue_bounding_rect.tl(), blue_bounding_rect.br(), Scalar( 255,255,255 ), 2 );
 					}
 				}
@@ -245,7 +245,7 @@ int32_t main(int32_t , char **)
 				{
 					for (ConeLocation c : cone_data)
 					{
-						std::cout << "Bearing:  " << c.relative_bearing() << "  DISTANCE:  " << c.distance() <<  "  Type:  " << c.type() <<  std::endl;
+						std::cout << "X:  " << c.x() << "  y:  " << c.y() <<  "  Bearing:  " << c.relative_bearing() << "  DISTANCE:  " << c.distance() << "  Type:  " << c.type() <<  std::endl;
 					}
 				}
 			}

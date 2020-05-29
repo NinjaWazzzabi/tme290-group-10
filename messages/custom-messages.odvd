@@ -17,3 +17,9 @@ message opendlv.robo.ConeLocation [id = 9003] {
 message opendlv.robo.KiwiLocation [id = 9004] {
   string data [id = 1];
 }
+
+message opendlv.robo.Aimpoint [id = 9005] {
+  float x [id = 1];
+  float y [id = 2];
+  float steering_angle [id = 3];
+}

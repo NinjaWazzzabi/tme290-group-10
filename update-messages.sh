@@ -14,6 +14,7 @@ cp messages/messages.hpp action-planner/src/
 cp messages/messages.hpp aimpoint-driver/src/
 cp messages/messages.hpp cone-detection/src/
 cp messages/messages.hpp kiwi-detection/src/
+cp messages/messages.hpp debug-drawer/src/
 
 # Remove dangling header file
 rm messages/messages.hpp

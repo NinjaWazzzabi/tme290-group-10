@@ -24,6 +24,8 @@ int32_t main(int32_t , char **)
 	const uint16_t CID{111};
 	std::mutex m_external_data;
 	std::vector<ConeLocation> global_cones;
+	double aimpoint_x = 0.0;
+	double aimpoint_y = 0.0;
 	std::deque<Mat> imgs;
 
 
@@ -44,6 +46,16 @@ int32_t main(int32_t , char **)
 				std::lock_guard<std::mutex> lock(m_external_data);
 				global_cones.clear();
 				global_cones = cones;
+			}
+		}};
+
+
+		auto aimpoint_listener{[&aimpoint_x, &aimpoint_y, &m_external_data](cluon::data::Envelope &&envelope) {
+			auto aimpoint_message = cluon::extractMessage<opendlv::robo::Aimpoint>(std::move(envelope));
+			{
+				std::lock_guard<std::mutex> lock(m_external_data);
+				aimpoint_x = aimpoint_message.x();
+				aimpoint_y = aimpoint_message.y();
 			}
 		}};
 		
@@ -80,6 +92,7 @@ int32_t main(int32_t , char **)
 		};
 		// Finally, we register our lambda for the message identifier for opendlv::proxy::DistanceReading.
 		od4.dataTrigger(opendlv::proxy::DistanceReading::ID(), onDistance);
+		od4.dataTrigger(opendlv::robo::Aimpoint::ID(), aimpoint_listener);
 		od4.dataTrigger(opendlv::robo::ConeLocation::ID(), cone_list_listener);
 
 
@@ -124,6 +137,7 @@ int32_t main(int32_t , char **)
 					rectangle( frame, Point(cone.x(),cone.y()), Point(cone.x() + cone.w(),cone.y() + cone.h()), Scalar( 255,255,255 ), 2 );
 				}
 				
+				circle(frame, Point(aimpoint_x, aimpoint_y), 20, Scalar(0, 125, 255), 5);
 
 				imshow("debug", frame);
 				waitKey(1);
