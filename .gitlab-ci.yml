@@ -18,7 +18,7 @@ build-amd64:
         - docker-build
     stage: build
     script:
-        - docker build .
+        - cd custom-dockers && ./build.sh && cd .. && ./build_rover.sh
     only:
         - master
 release: 
@@ -33,8 +33,29 @@ release:
             --output "/tmp/docker-buildx" && chmod 755 /tmp/docker-buildx
         - /tmp/docker-buildx create --name multiplatformbuilder
         - /tmp/docker-buildx use multiplatformbuilder
-        - /tmp/docker-buildx build --platform "$PLATFORMS" -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" . &&
-          /tmp/docker-buildx build --platform "$PLATFORMS" -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" --push .
+
+        # Splitting up a small project like this into different repositories
+        # will create more overhead for developers. We have our reasons to
+        # keep all source in the same repository.
+        # - /tmp/docker-buildx build --platform "$PLATFORMS" -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" . &&
+        #   /tmp/docker-buildx build --platform "$PLATFORMS" -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" --push .
+        - echo "HELLO I AM ALIVE"
+
+        # ACTION PLANNER
+        - /tmp/docker-buildx build --platform "$PLATFORMS" -f action-planner/Dockerfile -t "$CI_REGISTRY_IMAGE":"action-planner-arm" action-planner/ &&
+          /tmp/docker-buildx build --platform "$PLATFORMS" -f action-planner/Dockerfile -t "$CI_REGISTRY_IMAGE":"action-planner-arm" --push action-planner/
+
+        # AIMPOINT DRIVER
+        - /tmp/docker-buildx build --platform "$PLATFORMS" -f aimpoint-driver/Dockerfile -t "$CI_REGISTRY_IMAGE":"aimpoint-driver-arm" aimpoint-driver/ &&
+          /tmp/docker-buildx build --platform "$PLATFORMS" -f aimpoint-driver/Dockerfile -t "$CI_REGISTRY_IMAGE":"aimpoint-driver-arm" --push aimpoint-driver/
+
+        # CONE DETECTION
+        - /tmp/docker-buildx build --platform "$PLATFORMS" -f cone-detection/Dockerfile -t "$CI_REGISTRY_IMAGE":"cone-detection-arm" cone-detection/ &&
+          /tmp/docker-buildx build --platform "$PLATFORMS" -f cone-detection/Dockerfile -t "$CI_REGISTRY_IMAGE":"cone-detection-arm" --push cone-detection/
+
+        # KIWI DETECTION
+        - /tmp/docker-buildx build --platform "$PLATFORMS" -f kiwi-detection/Dockerfile -t "$CI_REGISTRY_IMAGE":"kiwi-detection-arm" kiwi-detection/ &&
+          /tmp/docker-buildx build --platform "$PLATFORMS" -f kiwi-detection/Dockerfile -t "$CI_REGISTRY_IMAGE":"kiwi-detection-arm" --push kiwi-detection/
     only:
         - tags
         - /^v[0-9.]+$/
