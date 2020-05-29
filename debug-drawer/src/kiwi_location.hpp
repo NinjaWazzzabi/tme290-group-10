@@ -36,8 +36,8 @@ public:
 		distance_ = sqrt(kiwi_fov * kiwi_fov / 4.0 - WIDTH * WIDTH / 4.0);
 		relative_bearing_ = (double(kiwi_centre_imagespace) - double(image_width) / 2.0) * (camera_fov / double(image_width));
 	}
-	
-	float x()
+    
+    float x()
 	{
 		return x_;
 	}
