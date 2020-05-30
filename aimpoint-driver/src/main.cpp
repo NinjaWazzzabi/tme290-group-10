@@ -90,6 +90,15 @@ int32_t main(int32_t, char **)
 			}
 		}
 
+		vector<KiwiLocation> kiwis;
+		{
+			std::lock_guard<std::mutex> lock(m_external_data);
+			for (KiwiLocation kiwi_location : global_kiwis)
+			{
+				kiwis.push_back(kiwi_location);
+			}
+		}
+
 		Vector2d aimpoint = aimpoint_finder.find_aimpoint(cones, previous_aimpoint);
 		Vector2d final_aimpoint = {
 			(aimpoint.x() * LOWPASS_WEIGHT) + (1.0 - LOWPASS_WEIGHT) * previous_aimpoint.x(),
@@ -105,7 +114,7 @@ int32_t main(int32_t, char **)
 		opendlv::proxy::PedalPositionRequest throttle_request;
 		opendlv::proxy::GroundSteeringRequest steering_request;
 
-		double desired_throttle = determine_throttle(global_kiwis,previous_throttle, MAX_SPEED);
+		double desired_throttle = determine_throttle(kiwis,previous_throttle, MAX_SPEED);
 
 		// TODO: Set throttle
 		aimpoint_message.x(final_aimpoint.x());
@@ -127,7 +136,7 @@ int32_t main(int32_t, char **)
 
 double determine_throttle(std::vector<KiwiLocation> kiwis, double previous_throttle, double MAX_SPEED)
 {
-	//double standard_acc = 0.7 * previous_throttle + 0.3 * MAX_SPEED;
+	//Placeholder
 	
 	if (kiwis.size() < 1)
 	{
@@ -136,7 +145,6 @@ double determine_throttle(std::vector<KiwiLocation> kiwis, double previous_throt
 	{
 		KiwiLocation kiwi = kiwis[0];
 		double kiwi_center = kiwi.y() + kiwi.h()/2;
-		std::cout << "Distance: " << kiwi.distance() << std::endl;
 		if (kiwi_center > 450)
 		{
 			return 0;
