@@ -9,7 +9,9 @@
 #include <memory>
 #include <mutex>
 
+
 #include "cone_location.hpp"
+#include "kiwi_location.hpp"
 #include "serializer.hpp"
 
 using namespace cv;
@@ -23,12 +25,13 @@ int32_t main(int32_t , char **)
 	int32_t retCode{1};
 
 	const double TO_DEGREES{180 / 3.141592653589793};
-	const std::string NAME{"video0.argb"};
+	const std::string NAME{"img.argb"};
 	const uint32_t WIDTH{1280};
 	const uint32_t HEIGHT{720};
 	const bool VERBOSE{false};
 	const uint16_t CID{111};
 	const Point CAMERA_POS = Point(WIDTH/2, HEIGHT);
+	
 
 
 	// Attach to the shared memory.
@@ -42,38 +45,22 @@ int32_t main(int32_t , char **)
 
 		
 
-		// Handler to receive distance readings (realized as C++ lambda).
-		std::mutex distancesMutex;
-		float front{0};
-		float rear{0};
-		float left{0};
-		float right{0};
-		auto onDistance = [&distancesMutex, &front, &rear, &left, &right](cluon::data::Envelope &&env) {
-			auto senderStamp = env.senderStamp();
+	
 
-			// Now, we unpack the cluon::data::Envelope to get the desired DistanceReading.
-			opendlv::proxy::DistanceReading dr = cluon::extractMessage<opendlv::proxy::DistanceReading>(std::move(env));
+		std::mutex m_external_data;
+		std::vector<KiwiLocation> global_kiwis;
 
-			// Store distance readings.
-			std::lock_guard<std::mutex> lck(distancesMutex);
-			switch (senderStamp)
+		auto kiwi_list_listener{[&global_kiwis, &m_external_data](cluon::data::Envelope &&envelope) {
+			auto kiwis_message = cluon::extractMessage<opendlv::robo::KiwiLocation>(std::move(envelope));
+			std::vector<KiwiLocation> kiwis = Serializer::decode<KiwiLocation>(kiwis_message.data());
 			{
-			case 0:
-				front = dr.distance();
-				break;
-			case 2:
-				rear = dr.distance();
-				break;
-			case 1:
-				left = dr.distance();
-				break;
-			case 3:
-				right = dr.distance();
-				break;
+				std::lock_guard<std::mutex> lock(m_external_data);
+				global_kiwis.clear();
+				global_kiwis = kiwis;
 			}
-		};
+		}};
 		// Finally, we register our lambda for the message identifier for opendlv::proxy::DistanceReading.
-		od4.dataTrigger(opendlv::proxy::DistanceReading::ID(), onDistance);
+		od4.dataTrigger(opendlv::robo::KiwiLocation::ID(), kiwi_list_listener);
 
 
 		// Loading template image for matching
@@ -98,6 +85,15 @@ int32_t main(int32_t , char **)
 				img = wrapped.clone();
 			}
 			sharedMemory->unlock();
+
+			std::vector<KiwiLocation> kiwis;
+			{
+				std::lock_guard<std::mutex> lock(m_external_data);
+				for (KiwiLocation kiwi_location : global_kiwis)
+				{
+					kiwis.push_back(kiwi_location);
+				}
+			}
 
 
 			Rect myROI(0, img.rows*9.4/16, img.cols, img.rows*4.2/16);
@@ -233,10 +229,29 @@ int32_t main(int32_t , char **)
 					}
 				}
 			}
+			
+			// Remove false positives due to Kiwi
+			std::vector<ConeLocation> cone_data_trimmed;
+			for (uint32_t i = 0; i < kiwis.size(); i++)
+			{
+				KiwiLocation kiwi = kiwis[i];
+				Rect kiwi_bbox = Rect(kiwi.x() + kiwi.w()/5.0f,kiwi.y() + kiwi.h()/5.0f, kiwi.w() - kiwi.w()/3.5f,kiwi.h() - kiwi.h()/3.5f);
+				for (ConeLocation c : cone_data)
+				{
+					Rect cone_bbox = Rect(c.x(),c.y(),c.w(),c.h());
+					if ( !( kiwi_bbox.contains(cone_bbox.tl()) && kiwi_bbox.contains(cone_bbox.br()) ) )
+					{
+						cone_data_trimmed.push_back(c);
+					}
+				}
+			}
+
+
+			
 
 			// Send cone data
 			opendlv::robo::ConeLocation cl;
-			cl.data(Serializer::encode(cone_data)); 
+			cl.data(Serializer::encode(cone_data_trimmed)); 
 			od4.send(cl);
 
 			if (VERBOSE)
