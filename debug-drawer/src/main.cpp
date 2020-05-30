@@ -19,7 +19,7 @@ int32_t main(int32_t , char **)
 {
 	int32_t retCode{1};
 
-	const std::string NAME{"img.argb"};
+	const std::string NAME{"video0.argb"};
 	const uint32_t WIDTH{1280};
 	const uint32_t HEIGHT{720};
 	const uint16_t CID{111};
@@ -157,6 +157,7 @@ int32_t main(int32_t , char **)
 				}
 				
 				circle(frame, Point(aimpoint_x, aimpoint_y), 20, Scalar(0, 125, 255), 5);
+				//rectangle( frame, Point(0, 560),Point( WIDTH, 700), Scalar( 0,255,0 ), 2 );
 
 				imshow("debug", frame);
 				waitKey(1);

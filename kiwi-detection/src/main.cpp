@@ -20,15 +20,16 @@ using namespace std;
 
 
 // Initialize the parameters
-float confThreshold = 0.3; // Confidence threshold
-float nmsThreshold = 0.2;  // Non-maximum suppression threshold
-int inpWidth = 608;  // Width of network's input image
-int inpHeight = 608; // Height of network's input image
+float confThreshold = 0.2; // Confidence threshold
+float nmsThreshold = 0.1;  // Non-maximum suppression threshold
+int inpWidth = 480;//608;  // Width of network's input image
+int inpHeight = 480;//608; // Height of network's input image
 
 const uint32_t WIDTH = 1280; // Width of image
 const uint32_t HEIGHT = 720; // Height of image
 const double CAMERA_FOV = 53.0; // Field of view of Kiwi Camera
 const double KIWI_WIDTH = 0.16; // Width of Kiwi in meters
+const bool SIMULATION{true};
 
 std::vector<std::string> classes{"kiwi"};
 
@@ -46,7 +47,7 @@ int32_t main(int32_t, char **)
 int32_t retCode{1};
 
 	//const double TO_DEGREES{180 / 3.141592653589793};
-	const std::string NAME{"img.argb"};
+	const std::string NAME{"video0.argb"};
 	//const bool VERBOSE{true};
 	const uint16_t CID{111};
 
@@ -124,41 +125,81 @@ int32_t retCode{1};
 				img = wrapped.clone();
 			}
 			sharedMemory->unlock();
-			Mat frame, blob;
-			cvtColor(img, frame, 1);
 
-			// Create a 4D blob from a frame.
-			blobFromImage(frame, blob, 1/255.0, Size(inpWidth, inpHeight), Scalar(0,0,0), true, false);
+			if (SIMULATION)
+			{
+				
 
-			
-			
-			//Sets the input to the network
-			net.setInput(blob);
-			
-			// Runs the forward pass to get output of the output layers
-			vector<Mat> outs;
-			net.forward(outs, getOutputsNames(net));
+				Mat hsv;
+				cvtColor(img, hsv,cv::COLOR_BGR2HSV);
+				//Red filter
+				Scalar  redLow(0, 0, 10);
+				Scalar  redHi(180,255,12);
+				Mat red_mask;
+				inRange(hsv , redLow , redHi , red_mask);
 
-			
-			// Remove the bounding boxes with low confidence
-			postprocess(frame, outs, od4);
+				std::vector<std::vector<Point>> red_contours;
+				std::vector<Vec4i> red_hierarchy;
+				findContours( red_mask, red_contours, red_hierarchy, cv::RETR_EXTERNAL , cv::CHAIN_APPROX_SIMPLE, Point(0, 0) );
+				std::vector <KiwiLocation> kiwi_locations;
+				for( int i = 0; i < (int) red_contours.size(); i++ )
+				{
+					
+					Rect red_bounding_rect = boundingRect( red_contours.at(i));
+					if (red_bounding_rect.area() > 5000 && red_bounding_rect.y < 500)
+					{
+						Rect box = red_bounding_rect;
+						KiwiLocation kiwi_location = KiwiLocation( box.x, box.y, box.width,box.height, WIDTH, CAMERA_FOV, box.width, box.x + box.width/2.0f);
+						//std::cout << "distance: "  <<  kiwi_location.distance() << "  y: " << kiwi_location.y() << std::endl;
+						
+						kiwi_locations.push_back(kiwi_location);
+						//rectangle( img, red_bounding_rect.tl(), red_bounding_rect.br(), Scalar( 255,255,255 ), 3 );
+					}
+				}
 
-			
-			// Put efficiency information. The function getPerfProfile returns the overall time for inference(t) and the timings for each of the layers(in layersTimes)
-			vector<double> layersTimes;
-			double freq = getTickFrequency() / 1000;
-			double t = net.getPerfProfile(layersTimes) / freq;
-			string label = format("Inference time for a frame : %.2f ms", t);
-			//std::cout << label << std::endl;
-			putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 255));
-			
-			// Write the frame with the detection boxes
-			Mat detectedFrame;
-			frame.convertTo(detectedFrame, CV_8U);
+				string serialized_kiwi_locations = Serializer::encode(kiwi_locations);
+				opendlv::robo::KiwiLocation kiwi_location_message;
+				kiwi_location_message.data(serialized_kiwi_locations);
+				od4.send(kiwi_location_message);
+			}
+			else
+			{
+				Mat frame, blob;
+				cvtColor(img, frame, 1);
+
+				// Create a 4D blob from a frame.
+				blobFromImage(frame, blob, 1/255.0, Size(inpWidth, inpHeight), Scalar(0,0,0), true, false);
 
 
-			//imshow("kiwis", frame);
-			//waitKey(1);
+
+				//Sets the input to the network
+				net.setInput(blob);
+
+				// Runs the forward pass to get output of the output layers
+				vector<Mat> outs;
+				net.forward(outs, getOutputsNames(net));
+
+
+				// Remove the bounding boxes with low confidence
+				postprocess(frame, outs, od4);
+
+
+				// Put efficiency information. The function getPerfProfile returns the overall time for inference(t) and the timings for each of the layers(in layersTimes)
+				vector<double> layersTimes;
+				double freq = getTickFrequency() / 1000;
+				double t = net.getPerfProfile(layersTimes) / freq;
+				string label = format("Inference time for a frame : %.2f ms", t);
+				//std::cout << label << std::endl;
+				putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 255));
+
+				// Write the frame with the detection boxes
+				Mat detectedFrame;
+				frame.convertTo(detectedFrame, CV_8U);
+
+
+				//imshow("kiwis", frame);
+				//waitKey(1);
+			}
 
 		}
 	}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <cmath>
 #include "cone_location.hpp"
 #include "line.hpp"
 
@@ -8,6 +9,13 @@ using namespace Eigen;
 
 class AimpointFinder
 {
+
+	double calculate_distance(ConeLocation coneA, ConeLocation coneB)
+	{
+		double distance;
+		distance = sqrt((coneB.x() - coneA.x()) * (coneB.x() - coneA.x()) + (coneB.y() - coneA.y()) * (coneB.y() - coneA.y()));
+		return distance;
+	}
 
 	Vector2d steer_one_cone_type(std::vector<ConeLocation> &cones, uint32_t cone_type)
 	{
@@ -86,17 +94,19 @@ public:
 			else if (cone_location.type() == CONE_RIGHT)
 			{
 				cones_right.push_back(cone_location);
-			}else if  (cone_location.type() == CONE_INTERSECTION)
+			}
+			else if  (cone_location.type() == CONE_INTERSECTION)
 			{
 				cones_intersection.push_back(cone_location);
 			}
 		}
 
+
 		Vector2d aimpoint;
-		if (cones_intersection.size()> cones_left.size() + cones_right.size())
+		if (cones_intersection.size() > cones_left.size() + cones_right.size())
 		{
 			// In intersection, slowly move aimpoint towards middle of screen
-			aimpoint = {(1280.0f/2) * 0.1 + 0.9 * prev_aimpoint.x(),(720.0f/2) *0.1 + 0.9 * prev_aimpoint.y()};
+			aimpoint = {(1280.0f/2) * 0.05 + 0.95 * prev_aimpoint.x(),(720.0f/2) *0.05 + 0.95 * prev_aimpoint.y()};
 		}
 		else if (cones_left.size() < 1 && cones_right.size() < 1)
 		{

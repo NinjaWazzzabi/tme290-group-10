@@ -20,6 +20,9 @@ using namespace std;
 
 static constexpr double LOWPASS_WEIGHT = 0.05;
 
+double determine_throttle(std::vector<KiwiLocation> kiwis, double previous_throttle, double MAX_SPEED);
+
+
 
 /**
  * TODO: Will not handle intersection well, as cones on both sides are the same colour
@@ -31,6 +34,7 @@ static constexpr double LOWPASS_WEIGHT = 0.05;
 int32_t main(int32_t, char **)
 {
 	static constexpr double STEERING_P = 0.01;
+	const double MAX_SPEED = 0.25;
 
 	std::mutex m_external_data;
 	uint32_t global_drive_state = STOP;
@@ -38,6 +42,8 @@ int32_t main(int32_t, char **)
 	std::vector<KiwiLocation> global_kiwis;
 	AimpointFinder aimpoint_finder;
 	Vector2d previous_aimpoint = {0.0, 0.0};
+	double previous_throttle = 0;
+	
 
 	// TODO: listen to kiwi location messages
 
@@ -72,8 +78,9 @@ int32_t main(int32_t, char **)
 	cluon::OD4Session session{CID};
 	session.dataTrigger(opendlv::robo::DriveState::ID(), drive_state_listener);
 	session.dataTrigger(opendlv::robo::ConeLocation::ID(), cone_list_listener);
+	session.dataTrigger(opendlv::robo::KiwiLocation::ID(), kiwi_list_listener);
 
-	auto aimpoint_runner{[&session, &global_cones, &aimpoint_finder, &previous_aimpoint, &m_external_data]() -> bool {
+	auto aimpoint_runner{[&session, &global_cones, &global_kiwis, &previous_throttle, &MAX_SPEED, &aimpoint_finder, &previous_aimpoint, &m_external_data]() -> bool {
 		vector<ConeLocation> cones;
 		{
 			std::lock_guard<std::mutex> lock(m_external_data);
@@ -98,20 +105,47 @@ int32_t main(int32_t, char **)
 		opendlv::proxy::PedalPositionRequest throttle_request;
 		opendlv::proxy::GroundSteeringRequest steering_request;
 
+		double desired_throttle = determine_throttle(global_kiwis,previous_throttle, MAX_SPEED);
+
 		// TODO: Set throttle
 		aimpoint_message.x(final_aimpoint.x());
 		aimpoint_message.y(final_aimpoint.y());
-		//std::cout << -desired_steering << std::endl;
 		aimpoint_message.steering_angle(desired_steering);
-		throttle_request.position(0.25);
+		throttle_request.position(desired_throttle);
 		steering_request.groundSteering(-desired_steering);
 
 		session.send(throttle_request);
 		session.send(steering_request);
 		session.send(aimpoint_message);
-
+		std::cout << "Throttle: " << desired_throttle << std::endl;
+		previous_throttle = desired_throttle;
 		previous_aimpoint = final_aimpoint;
 		return true;
 	}};
 	session.timeTrigger(FREQ, aimpoint_runner);
+}
+
+double determine_throttle(std::vector<KiwiLocation> kiwis, double previous_throttle, double MAX_SPEED)
+{
+	//double standard_acc = 0.7 * previous_throttle + 0.3 * MAX_SPEED;
+	
+	if (kiwis.size() < 1)
+	{
+		return MAX_SPEED;
+	}else
+	{
+		KiwiLocation kiwi = kiwis[0];
+		double kiwi_center = kiwi.y() + kiwi.h()/2;
+		std::cout << "Distance: " << kiwi.distance() << std::endl;
+		if (kiwi_center > 450)
+		{
+			return 0;
+		}
+		else if (kiwi_center > 375)
+		{
+			return 0.1 * MAX_SPEED;
+		}
+	}
+	
+	
 }
