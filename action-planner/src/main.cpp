@@ -23,8 +23,7 @@ int32_t main(int32_t, char **)
 	std::mutex m_external_data;
 	std::vector<ConeLocation> global_cones;
 	std::vector<KiwiLocation> global_kiwis;
-	opendlv::robo::KiwiLocation global_traffic_msg;
-	cluon::data::TimeStamp last_traffic_msg_timestamp;
+	cluon::data::TimeStamp last_traffic_timestamp;
 
 	auto cone_list_listener{[&global_cones, &m_external_data](cluon::data::Envelope &&envelope) {
 		auto cones_message = cluon::extractMessage<opendlv::robo::ConeLocation>(std::move(envelope));
@@ -35,16 +34,6 @@ int32_t main(int32_t, char **)
 			global_cones = cones;
 		}
 	}};
-
-	// Remove?
-	//auto traffic_listener{[&global_traffic_msg, &global_traffic_msg_timestamp, &m_external_data](cluon::data::Envelope &&envelope) {
-	//	auto traffic_msg = cluon::extractMessage<opendlv::robo::TrafficLocation>(std::move(envelope));
-	//	{
-	//		std::lock_guard<std::mutex> lock(m_external_data);
-	//		global_traffic_msg_timestamp = cluon::time::toMicroseconds(cluon::time::now());
-	//		global_traffic_msg = traffic_msg;
-	//	}
-	//}};
 
 	
 	auto kiwi_list_listener{[&global_kiwis, &m_external_data](cluon::data::Envelope &&envelope) {
@@ -92,14 +81,14 @@ int32_t main(int32_t, char **)
 				KiwiLocation kiwi = kiwis.at(i);
 				if (T_LEFT < kiwi.relative_bearing() && kiwi.relative_bearing() < T_RIGHT)
 				{
-					last_traffic_msg_timestamp = cluon::time::now();
+					last_traffic_timestamp = cluon::time::now();
 					break;
 				}
 
 			}
 		}
 
-		float microseconds_since_last_traffic = cluon::time::deltaInMicroseconds(cluon::time::now(),last_traffic_msg_timestamp);
+		float microseconds_since_last_traffic = cluon::time::deltaInMicroseconds(cluon::time::now(),last_traffic_timestamp);
 		
 		
 		// Choose drive state
@@ -111,7 +100,6 @@ int32_t main(int32_t, char **)
 		{
 			drive_state = DRIVE;
 		}
-		std::cout << "Drive state: " << drive_state << std::endl;
 
 		// Send drive state
 		opendlv::robo::DriveState drive_state_msg;
