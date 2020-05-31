@@ -20,7 +20,7 @@ services:
             - /tmp:/tmp
         environment:
             - DISPLAY=${DISPLAY}
-        command: "/usr/bin/cone-detection --name=img.argb"
+        command: "/usr/bin/cone-detection --name=video0.argb"
     kiwi-detection:
         image: kiwi-detection
         restart: on-failure
@@ -31,7 +31,7 @@ services:
         network_mode: "host"
         environment:
             - DISPLAY=${DISPLAY}
-        command: "/usr/bin/kiwi-detection --name=img.argb --simulation=0"
+        command: "/usr/bin/kiwi-detection --name=video0.argb --simulation=1"
     debug-drawer:
         image: debug-drawer
         restart: on-failure
@@ -42,4 +42,4 @@ services:
         network_mode: "host"
         environment:
             - DISPLAY=${DISPLAY}
-        command: "/usr/bin/debug-drawer --name=img.argb"
+        command: "/usr/bin/debug-drawer --name=video0.argb"

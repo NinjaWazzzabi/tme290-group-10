@@ -20,12 +20,13 @@ void MatchingMethod( int, void* , Mat img, Mat templ, bool show_image );
 
 ConeLocation extractConeData(Rect bbox, uint32_t type, Point CAMERA_POS, double TO_DEGREES, double cropped_top,uint32_t HEIGHT);
 
-int32_t main(int32_t , char **)
+int32_t main(int32_t argc, char **argv)
 {
 	int32_t retCode{1};
+	auto commandlineArguments = cluon::getCommandlineArguments(argc, argv);
+    const std::string NAME{commandlineArguments["name"]};
 
 	const double TO_DEGREES{180 / 3.141592653589793};
-	const std::string NAME{"img.argb"};
 	const uint32_t WIDTH{1280};
 	const uint32_t HEIGHT{720};
 	const bool VERBOSE{false};
@@ -95,8 +96,10 @@ int32_t main(int32_t , char **)
 				}
 			}
 
+			double top_crop = 9.4/16;
+			double bot_crop = 4.2/16;
 
-			Rect myROI(0, img.rows*9.4/16, img.cols, img.rows*4.2/16);
+			Rect myROI(0, img.rows*top_crop, img.cols, img.rows*bot_crop);
 			Mat croppedImage = img(myROI);
 
 			Mat red_prep;
@@ -231,22 +234,28 @@ int32_t main(int32_t , char **)
 			}
 			
 			// Remove false positives due to Kiwi
+
 			std::vector<ConeLocation> cone_data_trimmed;
-			for (uint32_t i = 0; i < kiwis.size(); i++)
-			{
-				KiwiLocation kiwi = kiwis[i];
-				Rect kiwi_bbox = Rect(kiwi.x() + kiwi.w()/5.0f,kiwi.y() + kiwi.h()/5.0f, kiwi.w() - kiwi.w()/3.5f,kiwi.h() - kiwi.h()/3.5f);
-				for (ConeLocation c : cone_data)
+			if (kiwis.size() > 0)
+			{	
+				for (uint32_t i = 0; i < kiwis.size(); i++)
 				{
-					Rect cone_bbox = Rect(c.x(),c.y(),c.w(),c.h());
-					if ( !( kiwi_bbox.contains(cone_bbox.tl()) && kiwi_bbox.contains(cone_bbox.br()) ) )
+					KiwiLocation kiwi = kiwis[i];
+					Rect kiwi_bbox = Rect(kiwi.x() + kiwi.w()/5.0f,kiwi.y() + kiwi.h()/5.0f, kiwi.w() - kiwi.w()/3.5f,kiwi.h() - kiwi.h()/3.5f);
+					for (ConeLocation c : cone_data)
 					{
-						cone_data_trimmed.push_back(c);
+						Rect cone_bbox = Rect(c.x(),c.y(),c.w(),c.h());
+						if ( !( kiwi_bbox.contains(cone_bbox.tl()) && kiwi_bbox.contains(cone_bbox.br()) ) )
+						{
+							cone_data_trimmed.push_back(c);
+						}
 					}
 				}
 			}
-
-
+			else
+			{
+				cone_data_trimmed = cone_data;
+			}
 			
 
 			// Send cone data

@@ -15,11 +15,12 @@
 using namespace cv;
 
 
-int32_t main(int32_t , char **)
+int32_t main(int32_t argc, char **argv)
 {
 	int32_t retCode{1};
-
-	const std::string NAME{"video0.argb"};
+	auto commandlineArguments = cluon::getCommandlineArguments(argc, argv);
+    const std::string NAME{commandlineArguments["name"]};
+	
 	const uint32_t WIDTH{1280};
 	const uint32_t HEIGHT{720};
 	const uint16_t CID{111};

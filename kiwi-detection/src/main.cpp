@@ -19,6 +19,9 @@ using namespace dnn;
 using namespace std;
 
 
+
+
+
 // Initialize the parameters
 float confThreshold = 0.2; // Confidence threshold
 float nmsThreshold = 0.1;  // Non-maximum suppression threshold
@@ -29,26 +32,24 @@ const uint32_t WIDTH = 1280; // Width of image
 const uint32_t HEIGHT = 720; // Height of image
 const double CAMERA_FOV = 53.0; // Field of view of Kiwi Camera
 const double KIWI_WIDTH = 0.16; // Width of Kiwi in meters
-const bool SIMULATION{true};
 
 std::vector<std::string> classes{"kiwi"};
 
 // Remove low confidence bboxes
 void postprocess(Mat& frame, const vector<Mat>& outs, cluon::OD4Session &session);
 
-// Draw the predicted bounding box
+// Draw the predicted bboxes
 void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame);
 
 // Get the names of the output layers
 vector<String> getOutputsNames(const Net& net);
 
-int32_t main(int32_t, char **)
+int32_t main(int32_t argc, char **argv)
 {
-int32_t retCode{1};
-
-	//const double TO_DEGREES{180 / 3.141592653589793};
-	const std::string NAME{"video0.argb"};
-	//const bool VERBOSE{true};
+	int32_t retCode{1};
+	auto commandlineArguments = cluon::getCommandlineArguments(argc, argv);
+    const std::string NAME{commandlineArguments["name"]};
+	const bool SIMULATION{static_cast<bool>(std::stoi(commandlineArguments["simulation"]))};
 	const uint16_t CID{111};
 
 	String modelConfiguration = "kiwi.cfg";
@@ -68,43 +69,6 @@ int32_t retCode{1};
 
 		// Interface to a running OpenDaVINCI session; here, you can send and receive messages.
 		cluon::OD4Session od4{CID};
-
-		
-
-
-		// Handler to receive distance readings (realized as C++ lambda).
-		std::mutex distancesMutex;
-		float front{0};
-		float rear{0};
-		float left{0};
-		float right{0};
-		auto onDistance = [&distancesMutex, &front, &rear, &left, &right](cluon::data::Envelope &&env) {
-			auto senderStamp = env.senderStamp();
-
-			// Now, we unpack the cluon::data::Envelope to get the desired DistanceReading.
-			opendlv::proxy::DistanceReading dr = cluon::extractMessage<opendlv::proxy::DistanceReading>(std::move(env));
-
-			// Store distance readings.
-			std::lock_guard<std::mutex> lck(distancesMutex);
-			switch (senderStamp)
-			{
-			case 0:
-				front = dr.distance();
-				break;
-			case 2:
-				rear = dr.distance();
-				break;
-			case 1:
-				left = dr.distance();
-				break;
-			case 3:
-				right = dr.distance();
-				break;
-			}
-		};
-		// Finally, we register our lambda for the message identifier for opendlv::proxy::DistanceReading.
-		od4.dataTrigger(opendlv::proxy::DistanceReading::ID(), onDistance);
-
 
 		while (od4.isRunning())
 		{
@@ -128,8 +92,6 @@ int32_t retCode{1};
 
 			if (SIMULATION)
 			{
-				
-
 				Mat hsv;
 				cvtColor(img, hsv,cv::COLOR_BGR2HSV);
 				//Red filter
@@ -167,38 +129,25 @@ int32_t retCode{1};
 				Mat frame, blob;
 				cvtColor(img, frame, 1);
 
-				// Create a 4D blob from a frame.
+				// Create a 4D blob from img
 				blobFromImage(frame, blob, 1/255.0, Size(inpWidth, inpHeight), Scalar(0,0,0), true, false);
-
-
-
-				//Sets the input to the network
 				net.setInput(blob);
 
-				// Runs the forward pass to get output of the output layers
 				vector<Mat> outs;
 				net.forward(outs, getOutputsNames(net));
-
 
 				// Remove the bounding boxes with low confidence
 				postprocess(frame, outs, od4);
 
-
-				// Put efficiency information. The function getPerfProfile returns the overall time for inference(t) and the timings for each of the layers(in layersTimes)
+				// show inference speed
 				vector<double> layersTimes;
 				double freq = getTickFrequency() / 1000;
 				double t = net.getPerfProfile(layersTimes) / freq;
 				string label = format("Inference time for a frame : %.2f ms", t);
 				//std::cout << label << std::endl;
 				putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 255));
-
-				// Write the frame with the detection boxes
 				Mat detectedFrame;
 				frame.convertTo(detectedFrame, CV_8U);
-
-
-				//imshow("kiwis", frame);
-				//waitKey(1);
 			}
 
 		}
@@ -207,7 +156,7 @@ int32_t retCode{1};
 	return retCode;
 }
 
-// Remove the bounding boxes with low confidence using non-maxima suppression
+// Remove the bounding boxes with low confidence
 void postprocess(Mat& frame, const vector<Mat>& outs, cluon::OD4Session &session)
 {
     vector<int> classIds;
@@ -217,15 +166,13 @@ void postprocess(Mat& frame, const vector<Mat>& outs, cluon::OD4Session &session
     for (size_t i = 0; i < outs.size(); ++i)
     {
         // Scan through all the bounding boxes output from the network and keep only the
-        // ones with high confidence scores. Assign the box's class label as the class
-        // with the highest score for the box.
+        // ones with high confidence scores. 
         float* data = (float*)outs[i].data;
         for (int j = 0; j < outs[i].rows; ++j, data += outs[i].cols)
         {
             Mat scores = outs[i].row(j).colRange(5, outs[i].cols);
             Point classIdPoint;
             double confidence;
-            // Get the value and location of the maximum score
             minMaxLoc(scores, 0, &confidence, 0, &classIdPoint);
             if (confidence > confThreshold)
             {
@@ -243,9 +190,6 @@ void postprocess(Mat& frame, const vector<Mat>& outs, cluon::OD4Session &session
         }
     }
 
-    
-    // Perform non maximum suppression to eliminate redundant overlapping boxes with
-    // lower confidences
 	vector<KiwiLocation> kiwi_locations;
     vector<int> indices;
     NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, indices);
@@ -255,7 +199,6 @@ void postprocess(Mat& frame, const vector<Mat>& outs, cluon::OD4Session &session
         Rect box = boxes[idx];
 		KiwiLocation kiwi_location = KiwiLocation( box.x, box.y, box.width,box.height, WIDTH, CAMERA_FOV, box.width, box.x + box.width/2.0f);
 		kiwi_locations.push_back(kiwi_location);
-
 		int classId = classIds[idx];
 		float conf = confidences[idx];
         drawPred(classId, conf , box.x, box.y,
@@ -269,22 +212,16 @@ void postprocess(Mat& frame, const vector<Mat>& outs, cluon::OD4Session &session
 	session.send(kiwi_location_message);
 }
 
-// Draw the predicted bounding box
 void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame)
 {
-    //Draw a rectangle displaying the bounding box
-    rectangle(frame, Point(left, top), Point(right, bottom), Scalar(255, 178, 50), 3);
-    
-    //Get the label for the class name and its confidence
+
+    rectangle(frame, Point(left, top), Point(right, bottom), Scalar(255, 178, 50), 3);    
     string label = format("%.2f", conf);
     if (!classes.empty())
     {
         CV_Assert(classId < (int)classes.size());
         label = classes[classId] + ":" + label;
     }
-	
-    
-    //Display the label at the top of the bounding box
     int baseLine;
     Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
     top = max(top, labelSize.height);
@@ -292,19 +229,13 @@ void drawPred(int classId, float conf, int left, int top, int right, int bottom,
     putText(frame, label, Point(left, top), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(0,0,0),1);
 }
 
-// Get the names of the output layers
 vector<String> getOutputsNames(const Net& net)
 {
     static vector<String> names;
     if (names.empty())
     {
-        //Get the indices of the output layers, i.e. the layers with unconnected outputs
         vector<int> outLayers = net.getUnconnectedOutLayers();
-        
-        //get the names of all the layers in the network
         vector<String> layersNames = net.getLayerNames();
-        
-        // Get the names of the output layers in names
         names.resize(outLayers.size());
         for (size_t i = 0; i < outLayers.size(); ++i)
         names[i] = layersNames[outLayers[i] - 1];
