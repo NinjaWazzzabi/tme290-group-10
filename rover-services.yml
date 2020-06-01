@@ -1,0 +1,25 @@
+version: "3.6"
+
+services:
+
+    action-planner:
+        image: registry.git.chalmers.se/kalcic/tme290-group-10:action-planner
+        network_mode: "host"
+    aimpoint-driver:
+        image: registry.git.chalmers.se/kalcic/tme290-group-10:aimpoint-driver
+        network_mode: "host"
+    cone-detection:
+        image: registry.git.chalmers.se/kalcic/tme290-group-10:cone-detection
+        restart: on-failure
+        network_mode: "host"
+        ipc: "host"
+        volumes:
+            - /tmp:/tmp
+    kiwi-detection:
+        image: registry.git.chalmers.se/kalcic/tme290-group-10:kiwi-detection
+        restart: on-failure
+        network_mode: "host"
+        ipc: "host"
+        volumes:
+            - /tmp:/tmp
+        network_mode: "host"
