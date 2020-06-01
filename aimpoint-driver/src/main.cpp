@@ -9,6 +9,7 @@
 #include "serializer.hpp"
 #include "line.hpp"
 #include "avg_aimpoint_finder.hpp"
+#include "closest_aimpoint_finder.hpp"
 
 #define CID 111
 #define FREQ 100
@@ -18,12 +19,13 @@
 
 using namespace std;
 
-static constexpr double LOWPASS_WEIGHT = 0.05;
+static constexpr double LOWPASS_WEIGHT = 0.02;
 static constexpr uint32_t CAMERA_WIDTH = 1280;
 static constexpr double CAMERA_FOV_X = 97.6;
 
 static constexpr double MIN_DISTANCE = 0.4;
 static constexpr double SPEED_P = 0.05;
+static constexpr double STEERING_P = 0.01;
 
 double determine_throttle(std::vector<KiwiLocation> kiwis, double previous_throttle, double MAX_SPEED);
 void send_control_request(double throttle, double steering, Vector2d aimpoint, cluon::OD4Session &session);
@@ -37,18 +39,16 @@ void send_control_request(double throttle, double steering, Vector2d aimpoint, c
 
 int32_t main(int32_t, char **)
 {
-	static constexpr double STEERING_P = 0.02;
 	const double MAX_SPEED = 0.25;
 
 	std::mutex m_external_data;
 	uint32_t global_drive_state = STOP;
 	std::vector<ConeLocation> global_cones;
 	std::vector<KiwiLocation> global_kiwis;
-	AvgAimpointFinder aimpoint_finder = AvgAimpointFinder(CAMERA_WIDTH);
+	// AvgAimpointFinder aimpoint_finder = AvgAimpointFinder(CAMERA_WIDTH);
+	ClosestAimpointFinder aimpoint_finder = ClosestAimpointFinder(CAMERA_WIDTH);
 	Vector2d previous_aimpoint = {0.0, 0.0};
 	double previous_throttle = 0;
-
-	// TODO: listen to kiwi location messages
 
 	auto drive_state_listener{[&global_drive_state, &m_external_data](cluon::data::Envelope &&envelope) {
 		auto drive_state_msg = cluon::extractMessage<opendlv::robo::DriveState>(std::move(envelope));

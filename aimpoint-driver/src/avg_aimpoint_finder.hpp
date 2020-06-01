@@ -70,18 +70,6 @@ class AvgAimpointFinder
 
 		avg_height_pos /= double(cones_left.size() + cones_right.size());
 		return Vector2d((avg_left_pos + avg_right_pos) / 2.0, avg_height_pos);
-
-		// NEXT IDEA:
-
-		// lines_between_cones{}
-		// For all possible permutations:
-		// Connect lines between between the cones
-		// IF there are NO LINES CROSSING
-		// add "line permutation" to lines_between_cones
-
-		// // The lines should now build a ladder
-
-		// Calculate aimpoint
 	}
 
 public:
