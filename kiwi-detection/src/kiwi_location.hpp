@@ -2,10 +2,13 @@
 
 #include <stdint.h>
 #include <math.h>
+#include <stdio.h>
 
 class KiwiLocation
 {
-	static constexpr double WIDTH = 0.16; // Meters
+	static constexpr double KIWI_WIDTH = 0.16; // Meters
+	static constexpr double KIWI_HEIGHT = 0.11; // Meters
+	static constexpr double CAMERA_HEIGHT = 0.091; // Meters
 	double x_;
 	double y_;
 	double w_;
@@ -25,16 +28,19 @@ public:
 		distance_ = distance;
 	}
 
-	KiwiLocation(double x, double y, double w, double h,uint32_t image_width, double camera_fov, uint32_t kiwi_width_imagespace, uint32_t kiwi_centre_imagespace)
+	KiwiLocation(double x, double y, double w, double h, uint32_t image_width, uint32_t image_height, double camera_fov_x, double camera_fov_y, uint32_t, uint32_t kiwi_centre_imagespace)
 	{
 		x_ = x;
 		y_ = y;
 		w_ = w;
 		h_ = h;
-		double kiwi_fov = camera_fov * (double(WIDTH) / double(kiwi_width_imagespace));
 		// Using hypotenuse theorem
-		distance_ = sqrt(kiwi_fov * kiwi_fov / 4.0 - WIDTH * WIDTH / 4.0);
-		relative_bearing_ = (double(kiwi_centre_imagespace) - double(image_width) / 2.0) * (camera_fov / double(image_width));
+		// double kiwi_fov = camera_fov * (double(kiwi_width_imagespace) / double(image_width));
+		// distance_ = WIDTH / (2 * tan(kiwi_fov * M_PI / (2 * 180)));
+
+		double angle_to_kiwi_top = camera_fov_y / double(image_height) * (image_height / 2 - y);
+		distance_ = (KIWI_HEIGHT - CAMERA_HEIGHT) / tan(angle_to_kiwi_top * M_PI / 180.0);
+		relative_bearing_ = (double(kiwi_centre_imagespace) - double(image_width) / 2.0) * (camera_fov_x / double(image_width));
 	}
 
 	float x()

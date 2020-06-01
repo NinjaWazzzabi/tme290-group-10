@@ -30,7 +30,8 @@ int inpHeight = 480;//608; // Height of network's input image
 
 const uint32_t WIDTH = 1280; // Width of image
 const uint32_t HEIGHT = 720; // Height of image
-const double CAMERA_FOV = 53.0; // Field of view of Kiwi Camera
+const double CAMERA_FOV_X = 97.6; // Field of view of Kiwi Camera
+const double CAMERA_FOV_Y = 54.9; // Field of view of Kiwi Camera
 const double KIWI_WIDTH = 0.16; // Width of Kiwi in meters
 
 std::vector<std::string> classes{"kiwi"};
@@ -111,8 +112,9 @@ int32_t main(int32_t argc, char **argv)
 					if (red_bounding_rect.area() > 5000 && red_bounding_rect.y < 500)
 					{
 						Rect box = red_bounding_rect;
-						KiwiLocation kiwi_location = KiwiLocation( box.x, box.y, box.width,box.height, WIDTH, CAMERA_FOV, box.width, box.x + box.width/2.0f);
-						//std::cout << "distance: "  <<  kiwi_location.distance() << "  y: " << kiwi_location.y() << std::endl;
+						// std::cout << "box.width: "  <<  box.width << std::endl;
+						KiwiLocation kiwi_location = KiwiLocation( box.x, box.y, box.width,box.height, WIDTH, HEIGHT, CAMERA_FOV_X, CAMERA_FOV_Y, box.width, box.x + box.width/2.0f);
+						std::cout << "distance: "  <<  kiwi_location.distance() << "  y: " << kiwi_location.y() << std::endl;
 						
 						kiwi_locations.push_back(kiwi_location);
 						//rectangle( img, red_bounding_rect.tl(), red_bounding_rect.br(), Scalar( 255,255,255 ), 3 );
@@ -197,7 +199,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs, cluon::OD4Session &session
     {
         int idx = indices[i];
         Rect box = boxes[idx];
-		KiwiLocation kiwi_location = KiwiLocation( box.x, box.y, box.width,box.height, WIDTH, CAMERA_FOV, box.width, box.x + box.width/2.0f);
+		KiwiLocation kiwi_location = KiwiLocation( box.x, box.y, box.width,box.height, WIDTH, HEIGHT, CAMERA_FOV_X, CAMERA_FOV_Y, box.width, box.x + box.width/2.0f);
 		kiwi_locations.push_back(kiwi_location);
 		int classId = classIds[idx];
 		float conf = confidences[idx];
