@@ -10,11 +10,19 @@ using namespace Eigen;
 class AimpointFinder
 {
 
+	uint32_t screen_width_;
+	double no_cone_steering_strength_;
+
 	double calculate_distance(ConeLocation coneA, ConeLocation coneB)
 	{
 		double distance;
 		distance = sqrt((coneB.x() - coneA.x()) * (coneB.x() - coneA.x()) + (coneB.y() - coneA.y()) * (coneB.y() - coneA.y()));
 		return distance;
+	}
+
+	uint32_t estimate_cone_side(ConeLocation cone)
+	{
+		return cone.x() - (screen_width_ / 2) > 0 ? CONE_RIGHT : CONE_LEFT;
 	}
 
 	Vector2d steer_one_cone_type(std::vector<ConeLocation> &cones, uint32_t cone_type)
@@ -28,16 +36,15 @@ class AimpointFinder
 
 		avg_height_pos /= double(cones.size());
 
-		// Uses known image sizes. Should be switched to bearing and distance
 		if (cone_type == CONE_LEFT)
 		{
 			// Vehicle staring towards the left side of track -> turn right
-			return Vector2d(400 + 1280 / 2, avg_height_pos);
+			return Vector2d(no_cone_steering_strength_ + screen_width_ / 2, avg_height_pos);
 		}
 		else
 		{
 			// Vehicle staring towards the right side of track -> turn left
-			return Vector2d(-400 + 1280 / 2, avg_height_pos);
+			return Vector2d(-no_cone_steering_strength_ + screen_width_ / 2, avg_height_pos);
 		}
 	}
 
@@ -62,16 +69,15 @@ class AimpointFinder
 		avg_right_pos /= double(cones_right.size());
 
 		avg_height_pos /= double(cones_left.size() + cones_right.size());
-		// Uses known image sizes. Should be switched to bearing and distance
 		return Vector2d((avg_left_pos + avg_right_pos) / 2.0, avg_height_pos);
 
 		// NEXT IDEA:
 
 		// lines_between_cones{}
 		// For all possible permutations:
-			// Connect lines between between the cones
-			// IF there are NO LINES CROSSING
-				// add "line permutation" to lines_between_cones
+		// Connect lines between between the cones
+		// IF there are NO LINES CROSSING
+		// add "line permutation" to lines_between_cones
 
 		// // The lines should now build a ladder
 
@@ -79,6 +85,12 @@ class AimpointFinder
 	}
 
 public:
+	AimpointFinder(uint32_t screen_width, double no_cone_steering_strength = 400.0)
+	{
+		screen_width_ = screen_width;
+		no_cone_steering_strength_ = no_cone_steering_strength;
+	}
+
 	Vector2d find_aimpoint(std::vector<ConeLocation> &cones, Vector2d prev_aimpoint)
 	{
 		// Group cones into cones_left and cones_right
@@ -95,23 +107,22 @@ public:
 			{
 				cones_right.push_back(cone_location);
 			}
-			else if  (cone_location.type() == CONE_INTERSECTION)
+			else if (cone_location.type() == CONE_INTERSECTION)
 			{
 				cones_intersection.push_back(cone_location);
 			}
 		}
 
-
 		Vector2d aimpoint;
-		if (cones_intersection.size() > cones_left.size() + cones_right.size())
-		{
-			// In intersection, slowly move aimpoint towards middle of screen
-			aimpoint = {(1280.0f/2) * 0.05 + 0.95 * prev_aimpoint.x(),(720.0f/2) *0.05 + 0.95 * prev_aimpoint.y()};
-		}
-		else if (cones_left.size() < 1 && cones_right.size() < 1)
+		if (cones_left.size() < 1 && cones_right.size() < 1 && cones_intersection.size() < 1)
 		{
 			// No cones found
 			aimpoint = prev_aimpoint;
+		}
+		else if (cones_left.size() < 1 && cones_right.size() < 1)
+		{
+			// Only intersection cones found
+			aimpoint = {(1280.0f / 2) * 0.05 + 0.95 * prev_aimpoint.x(), (720.0f / 2) * 0.05 + 0.95 * prev_aimpoint.y()};
 		}
 		else if (cones_left.size() < 1)
 		{
