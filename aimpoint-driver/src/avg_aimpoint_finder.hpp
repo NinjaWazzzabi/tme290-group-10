@@ -7,7 +7,7 @@
 
 using namespace Eigen;
 
-class AimpointFinder
+class AvgAimpointFinder
 {
 
 	uint32_t screen_width_;
@@ -85,7 +85,7 @@ class AimpointFinder
 	}
 
 public:
-	AimpointFinder(uint32_t screen_width, double no_cone_steering_strength = 400.0)
+	AvgAimpointFinder(uint32_t screen_width, double no_cone_steering_strength = 400.0)
 	{
 		screen_width_ = screen_width;
 		no_cone_steering_strength_ = no_cone_steering_strength;
@@ -114,15 +114,15 @@ public:
 		}
 
 		Vector2d aimpoint;
-		if (cones_left.size() < 1 && cones_right.size() < 1 && cones_intersection.size() < 1)
+		if (cones_intersection.size() > cones_left.size() + cones_right.size())
 		{
-			// No cones found
-			aimpoint = prev_aimpoint;
+			// Majority intersection cones found
+			aimpoint = {(1280.0f / 2) * 0.05 + 0.95 * prev_aimpoint.x(), (720.0f / 2) * 0.05 + 0.95 * prev_aimpoint.y()};
 		}
 		else if (cones_left.size() < 1 && cones_right.size() < 1)
 		{
-			// Only intersection cones found
-			aimpoint = {(1280.0f / 2) * 0.05 + 0.95 * prev_aimpoint.x(), (720.0f / 2) * 0.05 + 0.95 * prev_aimpoint.y()};
+			// No cones found
+			aimpoint = prev_aimpoint;
 		}
 		else if (cones_left.size() < 1)
 		{

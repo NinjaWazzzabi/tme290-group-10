@@ -8,7 +8,7 @@
 #include "kiwi_location.hpp"
 #include "serializer.hpp"
 #include "line.hpp"
-#include "aimpoint-finder.hpp"
+#include "avg_aimpoint_finder.hpp"
 
 #define CID 111
 #define FREQ 100
@@ -20,11 +20,13 @@ using namespace std;
 
 static constexpr double LOWPASS_WEIGHT = 0.05;
 static constexpr uint32_t CAMERA_WIDTH = 1280;
+static constexpr double CAMERA_FOV_X = 97.6;
 
 static constexpr double MIN_DISTANCE = 0.4;
-static constexpr double SPEED_P = 0.5;
+static constexpr double SPEED_P = 0.05;
 
 double determine_throttle(std::vector<KiwiLocation> kiwis, double previous_throttle, double MAX_SPEED);
+void send_control_request(double throttle, double steering, Vector2d aimpoint, cluon::OD4Session &session);
 
 /**
  * TODO: Will not handle intersection well, as cones on both sides are the same colour
@@ -35,14 +37,14 @@ double determine_throttle(std::vector<KiwiLocation> kiwis, double previous_throt
 
 int32_t main(int32_t, char **)
 {
-	static constexpr double STEERING_P = 0.01;
+	static constexpr double STEERING_P = 0.02;
 	const double MAX_SPEED = 0.25;
 
 	std::mutex m_external_data;
 	uint32_t global_drive_state = STOP;
 	std::vector<ConeLocation> global_cones;
 	std::vector<KiwiLocation> global_kiwis;
-	AimpointFinder aimpoint_finder = AimpointFinder(CAMERA_WIDTH);
+	AvgAimpointFinder aimpoint_finder = AvgAimpointFinder(CAMERA_WIDTH);
 	Vector2d previous_aimpoint = {0.0, 0.0};
 	double previous_throttle = 0;
 
@@ -81,7 +83,8 @@ int32_t main(int32_t, char **)
 	session.dataTrigger(opendlv::robo::ConeLocation::ID(), cone_list_listener);
 	session.dataTrigger(opendlv::robo::KiwiLocation::ID(), kiwi_list_listener);
 
-	auto aimpoint_runner{[&session, &global_cones, &global_kiwis, &previous_throttle, &MAX_SPEED, &aimpoint_finder, &previous_aimpoint, &m_external_data]() -> bool {
+	auto aimpoint_runner{[&session, &global_drive_state, &global_cones, &global_kiwis, &previous_throttle, &MAX_SPEED, &aimpoint_finder, &previous_aimpoint, &m_external_data]() -> bool {
+		// ─── LOAD VARAIBLES ──────────────────────────────────────────────
 		vector<ConeLocation> cones;
 		{
 			std::lock_guard<std::mutex> lock(m_external_data);
@@ -100,35 +103,36 @@ int32_t main(int32_t, char **)
 			}
 		}
 
+		uint32_t drive_state;
+		{
+			std::lock_guard<std::mutex> lock(m_external_data);
+			drive_state = global_drive_state;
+		}
+
+		// ─── CALCULATE AIMPOINT ──────────────────────────────────────────
 		Vector2d aimpoint = aimpoint_finder.find_aimpoint(cones, previous_aimpoint);
 		Vector2d final_aimpoint = {
 			(aimpoint.x() * LOWPASS_WEIGHT) + (1.0 - LOWPASS_WEIGHT) * previous_aimpoint.x(),
-			(aimpoint.y() * LOWPASS_WEIGHT) + (1.0 - LOWPASS_WEIGHT) * previous_aimpoint.y()
-			};
+			(aimpoint.y() * LOWPASS_WEIGHT) + (1.0 - LOWPASS_WEIGHT) * previous_aimpoint.y()};
 
-		// Uses known image sizes. Should be switched to bearing and distance
-		double aimpoint_angle_offset = (final_aimpoint.x() - 1280.0 / 2.0) * (53.0 / 1280.0);
+		double aimpoint_angle_offset = (final_aimpoint.x() - CAMERA_WIDTH / 2.0) * (CAMERA_FOV_X / CAMERA_WIDTH);
 		double desired_steering = STEERING_P * aimpoint_angle_offset;
 
-		opendlv::robo::Aimpoint aimpoint_message;
-		opendlv::proxy::PedalPositionRequest throttle_request;
-		opendlv::proxy::GroundSteeringRequest steering_request;
+		// ─── HANDLE DRIVE STATE ──────────────────────────────────────────
+		if (drive_state == DRIVE)
+		{
+			double desired_throttle = determine_throttle(kiwis, previous_throttle, MAX_SPEED);
+			send_control_request(desired_throttle, desired_steering, final_aimpoint, session);
 
-		double desired_throttle = determine_throttle(kiwis, previous_throttle, MAX_SPEED);
+			previous_throttle = desired_throttle;
+			previous_aimpoint = final_aimpoint;
+		}
+		else
+		{
+			double desired_throttle = 0.0;
+			send_control_request(desired_throttle, desired_steering, aimpoint, session);
+		}
 
-		// TODO: Set throttle
-		aimpoint_message.x(final_aimpoint.x());
-		aimpoint_message.y(final_aimpoint.y());
-		aimpoint_message.steering_angle(desired_steering);
-		throttle_request.position(desired_throttle);
-		steering_request.groundSteering(-desired_steering);
-
-		session.send(throttle_request);
-		session.send(steering_request);
-		session.send(aimpoint_message);
-
-		previous_throttle = desired_throttle;
-		previous_aimpoint = final_aimpoint;
 		return true;
 	}};
 	session.timeTrigger(FREQ, aimpoint_runner);
@@ -136,8 +140,6 @@ int32_t main(int32_t, char **)
 
 double determine_throttle(std::vector<KiwiLocation> kiwis, double, double MAX_SPEED)
 {
-	//Placeholder
-
 	if (kiwis.size() < 1)
 	{
 		return MAX_SPEED;
@@ -156,4 +158,20 @@ double determine_throttle(std::vector<KiwiLocation> kiwis, double, double MAX_SP
 			return SPEED_P * error_distance;
 		}
 	}
+}
+
+void send_control_request(double throttle, double steering, Vector2d aimpoint, cluon::OD4Session &session)
+{
+	opendlv::robo::Aimpoint aimpoint_message;
+	opendlv::proxy::PedalPositionRequest throttle_request;
+	opendlv::proxy::GroundSteeringRequest steering_request;
+	aimpoint_message.x(aimpoint.x());
+	aimpoint_message.y(aimpoint.y());
+	aimpoint_message.steering_angle(steering);
+	throttle_request.position(throttle);
+	steering_request.groundSteering(-steering);
+
+	session.send(throttle_request);
+	session.send(steering_request);
+	session.send(aimpoint_message);
 }
