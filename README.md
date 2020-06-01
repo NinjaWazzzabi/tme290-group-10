@@ -1,14 +1,22 @@
-# Starting simulation
+# Starting Kiwi software using online images
 
-To start the simulation, run the start script with:
+Run the following command in the terminal:
 
-	./start_sim.sh
+	docker-compose -f rover-simulation.yml up
+
+# Starting Kiwi software using local images
+
+To start the simulation for testing on replayviewer, run the start script:
+
+	./start_rover_sim.sh
+
+To start the simulation for testing with the simulator, run the start script:
+
+	./start_rover.sh
 
 If that does not work you might need to set the execution bit:
 
 	chmod +x start_sim.sh
-
-If you want to skip re-compiling of the services you can comment out the compile section
 
 # Updating the Open DLV message set
 
